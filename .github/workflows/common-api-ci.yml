@@ -24,7 +24,7 @@ env:
 jobs:
 
   test_build_release:
-    name: Test, Build, Publish on OS ${{ matrix.operating-system }}
+    name: Test, Build, Publish on ${{ matrix.operating-system }}
     runs-on: ${{ matrix.operating-system }}
     strategy:
       matrix:
@@ -174,18 +174,11 @@ jobs:
               echo "API is up"
 
       - name: Run Integration Test
-        ## Normally bash runs with -e which exits the shell upon hitting
-        ## an error which breaks our capturing of those errors.
-        shell: bash --noprofile --norc -o pipefail {0}
+        id: integration_tests
+        continue-on-error: true
         run: |
               ## Run Karate
               cd integration-tests && ./bin/karate ./features
-
-              ## Store the exit code off so we can pass this step and
-              ## capture the test output in the next step, but still
-              ## fail the entire job
-              echo "TEST_EXIT_CODE=$?" >> $GITHUB_ENV
-              exit 0
 
       - name: Upload Integration test results
         uses: actions/upload-artifact@v3
@@ -193,12 +186,11 @@ jobs:
           name: integration-test-results
           path: integration-tests/target
 
+      ## If we had errors on the test step, fail the job
       - name: Fail build on bad tests
+        if: steps.integration_tests.outcome == 'failure'
         run: |
-              ## Check if we had errors on the test step, and if so, fail the job
-              if [ $TEST_EXIT_CODE -ne 0 ]; then
-                echo "Tests Failed -- See Run Integration Test step or integration-test-results artifact for more information"
-                exit $TEST_EXIT_CODE
-              else
-                echo "Tests passed"
-              fi
+              echo "Tests Failed -- See Run Integration Test step or integration-test-results artifact for more information"
+              exit 1
+
+

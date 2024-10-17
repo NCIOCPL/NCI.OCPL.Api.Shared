@@ -69,7 +69,9 @@ jobs:
         with:
           repository: nciocpl/nci.ocpl.api.shared
           # Ref will need to be updated when version changes.
-          ref: v2.x
+          #ref: v2.x
+          # For development purposes.
+          ref: ticket/52-shared-wf
           path: shared
 
       - name: Publish

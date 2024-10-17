@@ -45,8 +45,7 @@ jobs:
           global-json-file: global.json
 
       - name: Build with dotnet
-        shell: bash
-        run: dotnet build --configuration Release /WarnAsError src/${{matrix.package}}/${{matrix.package}}.csproj
+        run: dotnet build --configuration Release /WarnAsError
 
       - name: Unit Tests (with Coverage)
         shell: bash

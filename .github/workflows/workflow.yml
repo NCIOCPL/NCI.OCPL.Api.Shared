@@ -1,4 +1,4 @@
-name: Main workflow
+name: Main workflow for building the shared nuget packages.
 on:
   ## This tries to avoid unessesary pushes to forked repo
   ## development branches. No sense in a dev building every
@@ -15,6 +15,12 @@ on:
       - 'feature/**'
   ## Any pull request.
   pull_request:
+
+# Only run one instance of this workflow at a time per branch.
+concurrency:
+  group: ${{ github.ref_name }}-${{ github.workflow }}
+  cancel-in-progress: true
+
 env:
   DOTNET_NOLOGO: true
 
@@ -25,59 +31,60 @@ jobs:
     runs-on: ${{ matrix.operating-system }}
     strategy:
       matrix:
-        operating-system: [ubuntu-latest, windows-latest, macOS-latest]
+        # Run on macos 13 because there was no arm support in .Net 3.1.1
+        operating-system: [ubuntu-latest, windows-latest, macos-13]
         package: [NCI.OCPL.Api.Common, NCI.OCPL.Api.Common.Testing]
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
-        ## using latest LTS releases - also it MUST be the SDK version.
+        uses: actions/checkout@v4
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '3.1.x'
+          global-json-file: global.json
 
       - name: Build with dotnet
         run: dotnet build --configuration Release /WarnAsError
 
       - name: Unit Tests (with Coverage)
+        shell: bash
         run: |
               if [ "$RUNNER_OS" == "Windows" ]; then
                 dotnet test
               else
-                dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=../../${{matrix.package}}.lcov         test/${{matrix.package}}.Tests
+                dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=../../${{matrix.package}}.lcov   test/${{matrix.package}}.Tests
               fi
-        shell: bash
 
       - name: Save Code Coverage Output
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage-api-common-${{ matrix.operating-system }}
-          path: ${{matrix.package}}.lcov
+        # Coverage output isn't created on Windows, so don't upload it.
         if: matrix.operating-system != 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{matrix.package}}-${{ matrix.operating-system }}
+          path: ${{matrix.package}}.lcov
 
       - name: Publish
+        shell: bash
         run: |
             dotnet publish --configuration Release --output $GITHUB_WORKSPACE/out src/${{matrix.package}}/
 
             ## directory for build-info.json
             mkdir -p $GITHUB_WORKSPACE/out/wwwroot/
-        shell: bash
 
         # Add the NuGet package to the build artifact.
       - name: Create NuGet package for ${{matrix.package}}
+        shell: bash
         run: |
           dotnet pack --configuration Release --output $GITHUB_WORKSPACE/out src/${{matrix.package}}
-        shell: bash
 
       - name: Record metadata
-        uses: nciocpl/build-info-action@v1.0.0
+        uses: nciocpl/build-info-action@v1.0.1
         with:
             output-name: "${{ github.workspace }}/out/wwwroot/build-info.json"
 
       - name: Upload Published Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.package}}-${{ matrix.operating-system }}
           path: out
@@ -89,7 +96,7 @@ jobs:
     needs: test_build_release
     services:
       elasticsearch:
-        image: elasticsearch:7.9.2
+        image: elasticsearch:7.17.5
         env:
           ## Pass elasticsearch options via environment variables.
           discovery.type: single-node
@@ -100,15 +107,15 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-        ## using latest LTS releases - also it MUST be the SDK version.
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '3.1.x'
+          global-json-file: global.json
 
       - name: Setup test output directory
+        shell: bash
         run: |
               ## Create test output and API logging location
               mkdir -p integration-tests/target
@@ -117,6 +124,7 @@ jobs:
         # API components, we have to create an API specifically for testing, which means it also has
         # to be built for the express purpose of running the integration tests.
       - name: Build Test Harness
+        shell: bash
         run: |
               dotnet publish -c Release -o $GITHUB_WORKSPACE/built-api test/integration-test-harness/
 
@@ -129,6 +137,7 @@ jobs:
           WAIT_DURATION: 120
           APP_PATH: ./built-api
           APP_ASSEMBLY: integration-test-harness.dll
+        shell: bash
         run: |
               ## TODO: This should become a GitHub Action.
 
@@ -170,6 +179,7 @@ jobs:
       - name: Load Data into elasticsearch & prepare for tests
         env:
           ELASTIC_SEARCH_HOST: http://localhost:${{ job.services.elasticsearch.ports[9200] }}
+        shell: bash
         run: |
               ## Create test output and API logging location
               mkdir -p integration-tests/target
@@ -192,12 +202,13 @@ jobs:
               exit 0
 
       - name: Upload Integration test results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: integration-test-results
           path: integration-tests/target
 
       - name: Fail build on bad tests
+        shell: bash
         run: |
               ## Check if we had errors on the test step, and if so, fail the job
               if [ $TEST_EXIT_CODE_1 -ne 0 ] || [ $TEST_EXIT_CODE_2 -ne 0 ]; then
@@ -228,6 +239,7 @@ jobs:
     steps:
       - name: Set outputs
         id: set_outputs
+        shell: bash
         run: |
           # Only publish packages if the run was triggered by a push to the version number branch.
           BRANCH_NAME=$(sed -E 's/refs\/(heads|tags)\///;' <<< $GITHUB_REF)
@@ -241,7 +253,6 @@ jobs:
 
           echo ${SHOULD_PUBLISH}
           echo "should_publish=${SHOULD_PUBLISH}" >> $GITHUB_OUTPUT
-        shell: bash
 
 
   publish_nuget_packages:
@@ -264,16 +275,15 @@ jobs:
 
     steps:
       - name: Download Published Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{matrix.package}}-windows-latest
           path: ${{ github.workspace }}
 
-        ## using latest LTS releases - also it MUST be the SDK version.
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '3.1.x'
+          global-json-file: global.json
           source-url: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
         env:
           NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
@@ -283,7 +293,7 @@ jobs:
         # If this fails with a message saying "Forbidden" and the repository name, check that the
         # repository where the build is taking place matches the one in the .csproj files' <RepositoryUrl> element.
       - name: Publish NuGet package for ${{matrix.package}}
+        shell: bash
         run: |
           dotnet nuget push ./*.nupkg
-        shell: bash
 

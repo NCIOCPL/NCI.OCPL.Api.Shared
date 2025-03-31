@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1 AS build-env
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 COPY ./src /app/src
 COPY ./test /app/test
 COPY ./nci.ocpl.api.common.sln /app/app.sln
@@ -6,7 +6,7 @@ WORKDIR /app
 RUN dotnet publish -c Release -o /app/out
 
 # Build runtime image
-FROM mcr.microsoft.com/dotnet/core/aspnet:3.1
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build-env /app/out .
 COPY ./integration-tests/docker-nciocpl-api-common/api/build/appsettings.inttest.json .

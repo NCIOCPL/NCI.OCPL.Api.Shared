@@ -95,7 +95,7 @@ jobs:
     needs: test_build_release
     services:
       elasticsearch:
-        image: elasticsearch:7.17.5
+        image: elasticsearch:7.17.28
         env:
           ## Pass elasticsearch options via environment variables.
           discovery.type: single-node

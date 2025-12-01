@@ -1,0 +1,18 @@
+# Create a docker-compose.yml file to define a "load-test" service
+
+services:
+  jmeter:
+    build:
+      context: jmeter
+    volumes:
+      - ./test-plan.jmx:/root/test-plan.jmx
+      - ./config:/root/config
+      - ./data-files:/root/data-files
+      - ./results/:/root/results/
+      - ./assertion-failures:/root/assertion-failures
+    networks:
+      - monitoring
+
+networks:
+  monitoring:
+    driver: bridge

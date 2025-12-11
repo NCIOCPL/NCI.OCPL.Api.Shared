@@ -1,6 +1,5 @@
 using System.IO;
 using System.Text;
-using Newtonsoft.Json.Linq;
 
 namespace NCI.OCPL.Api.Common.Testing
 {

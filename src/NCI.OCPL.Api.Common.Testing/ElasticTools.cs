@@ -1,8 +1,7 @@
 using System;
 
-using Elasticsearch.Net;
-using Nest;
-using Nest.JsonNetSerializer;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Transport;
 
 namespace NCI.OCPL.Api.Common.Testing
 {
@@ -13,50 +12,50 @@ namespace NCI.OCPL.Api.Common.Testing
     public static class ElasticTools {
 
         /// <summary>
-        /// Gets an ElasticClient backed by an InMemoryConnection.  This is used to mock the
-        /// JSON returned by the elastic search so that we test the Nest mappings to our models.
+        /// Gets an ElasticsearchClient backed by an InMemoryConnection.  This is used to mock the
+        /// JSON returned by the elastic search so that we test the Elasticsearch mappings to our models.
         /// </summary>
         /// <param name="testFile"></param>
         /// <returns></returns>
-        public static IElasticClient GetInMemoryElasticClient(string testFile) {
+        public static ElasticsearchClient GetInMemoryElasticClient(string testFile) {
 
             //Get Response JSON
             byte[] responseBody = TestingTools.GetTestFileAsBytes(testFile);
 
             //While this has a URI, it does not matter, an InMemoryConnection never requests
             //from the server.
-            var pool = new SingleNodeConnectionPool(new Uri("http://localhost:9200"));
+            var pool = new SingleNodePool(new Uri("http://localhost:9200"));
 
             // Setup ElasticSearch stuff using the contents of the JSON file as the client response.
-            InMemoryConnection conn = new InMemoryConnection(responseBody);
+            InMemoryRequestInvoker conn = new InMemoryRequestInvoker(responseBody);
 
-            var connectionSettings = new ConnectionSettings(pool, conn, sourceSerializer: JsonNetSerializer.Default);
+            var connectionSettings = new ElasticsearchClientSettings(pool, conn);
 
-            return new ElasticClient(connectionSettings);
+            return new ElasticsearchClient(connectionSettings);
         }
 
         /// <summary>
-        /// Gets an ElasticClient which simulates a failed request.  Success is defined by
+        /// Gets an ElasticsearchClient which simulates a failed request.  Success is defined by
         /// statuses with a 200-series response, so anything from the 400 or 503 series
         /// should be treated as an error.
         /// </summary>
         /// <param name="statusCode"></param>
         /// <returns></returns>
-        public static IElasticClient GetErrorElasticClient(int statusCode)
+        public static ElasticsearchClient GetErrorElasticClient(int statusCode)
         {
           //While this has a URI, it does not matter, an InMemoryConnection never requests
           //from the server.
-          var pool = new SingleNodeConnectionPool(new Uri("http://localhost:9200"));
+          var pool = new SingleNodePool(new Uri("http://localhost:9200"));
 
           //Get Response JSON
           byte[] responseBody = new byte[0];
 
           // Setup ElasticSearch stuff using the contents of the JSON file as the client response.
-          InMemoryConnection conn = new InMemoryConnection(responseBody, statusCode);
+          InMemoryRequestInvoker conn = new InMemoryRequestInvoker(responseBody, statusCode);
 
-          var connectionSettings = new ConnectionSettings(pool, conn, sourceSerializer: JsonNetSerializer.Default);
+          var connectionSettings = new ElasticsearchClientSettings(pool, conn);
 
-          return new ElasticClient(connectionSettings);
+          return new ElasticsearchClient(connectionSettings);
         }
 
   }

@@ -3,10 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
-using Elasticsearch.Net;
-using Newtonsoft.Json.Linq;
+using Elastic.Transport;
+using Elastic.Transport.Products.Elasticsearch;
+
+#nullable enable
 
 namespace NCI.OCPL.Api.Common.Testing
 {
@@ -17,7 +21,7 @@ namespace NCI.OCPL.Api.Common.Testing
     /// <remarks>
     /// Use <see cref="RegisterRequestHandlerForType" /> to set simulated Elasticsearch responses.
     /// </remarks>
-      public class ElasticsearchInterceptingConnection : IConnection
+      public class ElasticsearchInterceptingConnection : IRequestInvoker
     {
         /// <summary>
         /// Container for simulated Elasticsearch responses.
@@ -29,7 +33,7 @@ namespace NCI.OCPL.Api.Common.Testing
             /// <summary>
             /// Stream representing the response body.
             /// </summary>
-            public Stream Stream { get; set; }
+            public Stream? Stream { get; set; }
 
             /// <summary>
             /// The simulated Elasticsearch HTTP status code.  Required if Stream is set.
@@ -39,7 +43,7 @@ namespace NCI.OCPL.Api.Common.Testing
             /// <summary>
             /// The simulated response MIME type.
             /// </summary>
-            public string ResponseMimeType { get; set; }
+            public string? ResponseMimeType { get; set; }
 
             /// <summary>
             /// For the IDispose pattern.
@@ -50,7 +54,7 @@ namespace NCI.OCPL.Api.Common.Testing
               {
                 if (disposing)
                 {
-                  Stream.Dispose();
+                  Stream?.Dispose();
                 }
 
                 // TODO: free unmanaged resources (unmanaged objects) and override finalizer
@@ -71,7 +75,20 @@ namespace NCI.OCPL.Api.Common.Testing
         }
 
         private Dictionary<Type, object> _callbackHandlers = new Dictionary<Type, object>();
-        private Action<RequestData, object> _defCallbackHandler = null;
+        private Action<string, ResponseData>? _defCallbackHandler = null;
+
+        /// <summary>
+        /// Gets the response factory for creating responses
+        /// </summary>
+        public ResponseFactory ResponseFactory { get; }
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public ElasticsearchInterceptingConnection()
+        {
+            ResponseFactory = new ElasticsearchResponseFactory();
+        }
 
         /// <summary>
         /// For the IDispose pattern.
@@ -87,11 +104,11 @@ namespace NCI.OCPL.Api.Common.Testing
         /// </summary>
         /// <typeparam name="TReturn"></typeparam>
         /// <param name="callback"></param>
-        public void RegisterRequestHandlerForType<TReturn>(Action<RequestData, ResponseData> callback)
+        public void RegisterRequestHandlerForType<TReturn>(Action<string, ResponseData> callback)
             where TReturn : class
         {
             Type returnType = typeof(TReturn);
-            Type handlerType = null;
+            Type? handlerType = null;
 
             //Loop through the register handlers and see if our type is registered, OR
             //if a base class is registered.
@@ -125,7 +142,7 @@ namespace NCI.OCPL.Api.Common.Testing
         /// isn't registered.
         /// </summary>
         /// <param name="callback"></param>
-        public void RegisterDefaultHandler(Action<RequestData, object> callback)
+        public void RegisterDefaultHandler(Action<string, ResponseData> callback)
         {
             if (_defCallbackHandler != null)
                 throw new ArgumentException("Cannot add more than one default handler");
@@ -138,7 +155,7 @@ namespace NCI.OCPL.Api.Common.Testing
         /// but the ResponseBuilder class required of those methods is static (it not only can't be mocked,
         /// it can't even be passed in), rendering both methods untestable. Making this one protected at least
         /// allows the real logic to be tested.
-        protected void ProcessRequest<TReturn>(RequestData requestData, ResponseData responseData)
+        protected void ProcessRequest<TReturn>(Endpoint endpoint, ResponseData responseData)
             where TReturn : class
         {
             Type returnType = typeof(TReturn);
@@ -152,11 +169,11 @@ namespace NCI.OCPL.Api.Common.Testing
                     {
                         foundHandler = true;
 
-                        Action<RequestData, ResponseData> callback =
-                            (Action<RequestData, ResponseData>)_callbackHandlers[typeof(TReturn)];
+                        Action<string, ResponseData> callback =
+                            (Action<string, ResponseData>)_callbackHandlers[typeof(TReturn)];
 
                         callback(
-                            requestData,
+                            endpoint.ToString(),
                             responseData
                         );
 
@@ -169,7 +186,7 @@ namespace NCI.OCPL.Api.Common.Testing
             {
                 foundHandler = true;
                 _defCallbackHandler(
-                    requestData,
+                    endpoint.ToString(),
                     responseData
                 );
             }
@@ -177,11 +194,6 @@ namespace NCI.OCPL.Api.Common.Testing
             //If we did not find any, throw an exception
             if (!_callbackHandlers.ContainsKey(typeof(TReturn)) && _defCallbackHandler == null)
                 throw new ArgumentOutOfRangeException("There is no callback handler for defined for type, " + typeof(TReturn).ToString());
-
-            //It looks like, based on the code and use of the code, not because of actual commeents, that MadeItToResponse gets set
-            //once the Connection was able to get a response from a server.  I am going to set it here, but we may need to update later
-            //if we want to test connection failures.
-            requestData.MadeItToResponse = true;
 
             // If the dev writing the test DID provide response data, but DID NOT set a MIME type, we'll just have to
             // assume they meant to set "applicaton/json" since that's what Elasticsearch normally sends back.
@@ -204,54 +216,82 @@ namespace NCI.OCPL.Api.Common.Testing
             //this stupid issue down.
             if (responseData.Stream == null)
             {
-                using (MemoryStream stream = new MemoryStream(new byte[0])) {
-                    responseData.Stream = stream;
-                }
+                responseData.Stream = new MemoryStream(new byte[0]);
             }
         }
 
-        TReturn IConnection.Request<TReturn>(RequestData requestData)
+        /// <summary>
+        /// Synchronous request implementation
+        /// </summary>
+        public TResponse Request<TResponse>(Endpoint endpoint, BoundConfiguration boundConfiguration, PostData? postData, CancellationToken cancellationToken = default)
+            where TResponse : TransportResponse, new()
         {
-            Exception processingException = null;
             using(ResponseData responseData = new ResponseData())
             {
-              this.ProcessRequest<TReturn>(requestData, responseData);
+              this.ProcessRequest<TResponse>(endpoint, responseData);
 
-              return ResponseBuilder.ToResponse<TReturn>(requestData, processingException, responseData.StatusCode, null, responseData.Stream, responseData.ResponseMimeType);
+              // Ensure we have a stream (even if empty)
+              var stream = responseData.Stream ?? new MemoryStream(new byte[0]);
+
+              return ResponseFactory.Create<TResponse>(endpoint, boundConfiguration, postData, null,
+                  responseData.StatusCode, null, stream,
+                  responseData.ResponseMimeType ?? "application/json", 0, null, null);
             }
         }
 
-        async Task<TReturn> IConnection.RequestAsync<TReturn>(RequestData requestData, System.Threading.CancellationToken cancellationToken)
+        /// <summary>
+        /// Asynchronous request implementation
+        /// </summary>
+        public async Task<TResponse> RequestAsync<TResponse>(Endpoint endpoint, BoundConfiguration boundConfiguration, PostData? postData, CancellationToken cancellationToken = default)
+            where TResponse : TransportResponse, new()
         {
-            Exception processingException = null;
             using( ResponseData responseData = new ResponseData())
             {
-              this.ProcessRequest<TReturn>(requestData, responseData);
+              this.ProcessRequest<TResponse>(endpoint, responseData);
 
-              return await ResponseBuilder.ToResponseAsync<TReturn>(requestData, processingException, responseData.StatusCode, null, responseData.Stream, responseData.ResponseMimeType, cancellationToken);
+              // Ensure we have a stream (even if empty)
+              var stream = responseData.Stream ?? new MemoryStream(new byte[0]);
+
+              return await Task.FromResult(ResponseFactory.Create<TResponse>(endpoint, boundConfiguration, postData, null,
+                  responseData.StatusCode, null, stream,
+                  responseData.ResponseMimeType ?? "application/json", 0, null, null));
+            }
+        }        /// <summary>
+        /// Helper to read stream to byte array
+        /// </summary>
+        private byte[] ReadStreamToBytes(Stream stream)
+        {
+            if (stream == null)
+                return new byte[0];
+
+            stream.Position = 0;
+            using (var memoryStream = new MemoryStream())
+            {
+                stream.CopyTo(memoryStream);
+                return memoryStream.ToArray();
             }
         }
 
         /// <summary>
         /// Helper function to extract the body of a request that would be sent to the Elasticsearch server.
         /// </summary>
-        /// <param name="requestData">The request object</param>
-        /// <returns>JObject containing the request</returns>
-        public JToken GetRequestPost(RequestData requestData)
+        /// <param name="postData">The post data object</param>
+        /// <returns>JsonDocument containing the request</returns>
+        public JsonDocument? GetRequestPost(PostData? postData)
         {
             //Some requests can have this as null.  That is ok...
-            if (requestData.PostData == null)
+            if (postData == null)
                 return null;
 
             String postBody = string.Empty;
 
             using (MemoryStream stream = new MemoryStream())
             {
-                requestData.PostData.Write(stream, requestData.ConnectionSettings);
+                postData.Write(stream, new TransportConfiguration(), false);
                 postBody = Encoding.UTF8.GetString(stream.ToArray());
             }
 
-            return JToken.Parse(postBody);
+            return JsonDocument.Parse(postBody);
         }
     }
 }

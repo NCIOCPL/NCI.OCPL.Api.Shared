@@ -1,11 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp8.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-
-    <Version>3.0.1</Version>
-
+    <Version>4.0.0-alpha1</Version>
     <PackageDescription>Common code for use between APIs.</PackageDescription>
     <RepositoryUrl>https://github.com/NCIOCPL/NCI.OCPL.Api.Shared</RepositoryUrl>
     <Authors>National Cancer Institute - Office of Communications and Public Liaison</Authors>
@@ -15,10 +13,8 @@
 
     <!-- Explicit framework reference because this project builds a library to support APIs, not the actual APIs.-->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.*" />
 
-    <PackageReference Include="NEST" Version="7.9.*" />
-    <PackageReference Include="NEST.JsonNetSerializer" Version="7.9.*" />
+    <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.19.*" />
 
     <PackageReference Include="NSwag.AspNetCore" Version="13.11.*" />
   </ItemGroup>

@@ -13,9 +13,8 @@ using Microsoft.Extensions.Hosting;
 
 using NCI.OCPL.Api.Common.Models.Options;
 
-using Nest;
-using Nest.JsonNetSerializer;
-using Elasticsearch.Net;
+using Elastic.Clients.Elasticsearch;
+using Elastic.Transport;
 
 
 namespace NCI.OCPL.Api.Common
@@ -68,14 +67,14 @@ namespace NCI.OCPL.Api.Common
       services.AddSingleton<HttpClient, HttpClient>();
 
 
-      // This will inject an IElasticClient using our configuration into any
-      // controllers that take an IElasticClient parameter into its constructor.
+      // This will inject an ElasticsearchClient using our configuration into any
+      // controllers that take an ElasticsearchClient parameter into its constructor.
       //
       // AddSingleton means that only once instance of the ElasticClient will be
       // created for the lifetime of the application.  This is the recommended
       // approach per the ElasticSearch documentation. (Creating multiple clients
       // can cause port exhaustion.)
-      services.AddSingleton<IElasticClient>(p =>
+      services.AddSingleton<ElasticsearchClient>(p =>
       {
 
         // Get the ElasticSearch credentials.
@@ -89,18 +88,18 @@ namespace NCI.OCPL.Api.Common
         // keep tabs on the health of the servers in the cluster and
         // probe them to ensure they are healthy.  This is how we handle
         // redundancy and load balancing.
-        var connectionPool = new SniffingConnectionPool(uris);
+        var connectionPool = new SniffingNodePool(uris);
 
-        //Return a new instance of an ElasticClient with our settings
-        ConnectionSettings settings = new ConnectionSettings(connectionPool, sourceSerializer: JsonNetSerializer.Default);
+        //Return a new instance of an ElasticsearchClient with our settings
+        var settings = new ElasticsearchClientSettings(connectionPool);
 
         //Let's only try and use credentials if the username is set.
         if (!string.IsNullOrWhiteSpace(username))
         {
-          settings.BasicAuthentication(username, password);
+          settings.Authentication(new BasicAuthentication(username, password));
         }
 
-        return new ElasticClient(settings);
+        return new ElasticsearchClient(settings);
       });
 
       //Add in Application specific services
@@ -122,8 +121,7 @@ namespace NCI.OCPL.Api.Common
       services.AddCors();
 
       // Make the application's routes available.
-      services.AddControllers()
-        .AddNewtonsoftJson();
+      services.AddControllers();
 
       // Enable Swagger
       // This creates the Swagger Json

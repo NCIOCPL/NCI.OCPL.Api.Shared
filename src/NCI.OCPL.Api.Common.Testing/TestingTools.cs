@@ -1,10 +1,9 @@
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 using System.Xml;
 using System.Xml.Serialization;
-
-using Newtonsoft.Json.Linq;
 
 
 namespace NCI.OCPL.Api.Common.Testing
@@ -84,14 +83,14 @@ namespace NCI.OCPL.Api.Common.Testing
         }
 
         /// <summary>
-        /// Gets a JSON file and parses it into a JObject structure.
+        /// Gets a JSON file and parses it into a JsonDocument structure.
         /// </summary>
         /// <param name="testFile">Name of the file to load.</param>
-        /// <returns>A JObject structure containing the parsed data.</returns>
-        public static JObject GetDataFileAsJObject(string testFile)
+        /// <returns>A JsonDocument structure containing the parsed data.</returns>
+        public static JsonDocument GetDataFileAsJsonDocument(string testFile)
         {
             string path = GetPathToTestFile(testFile);
-            return JObject.Parse(File.ReadAllText(path));
+            return JsonDocument.Parse(File.ReadAllText(path));
         }
 
         /// <summary>

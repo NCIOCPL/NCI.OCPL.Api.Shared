@@ -7,8 +7,8 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
-using Elastic.Transport.Products.Elasticsearch;
 
 #nullable enable
 
@@ -76,18 +76,20 @@ namespace NCI.OCPL.Api.Common.Testing
 
         private Dictionary<Type, object> _callbackHandlers = new Dictionary<Type, object>();
         private Action<string, ResponseData>? _defCallbackHandler = null;
+        private readonly ElasticsearchClient _helperClient;
 
         /// <summary>
         /// Gets the response factory for creating responses
         /// </summary>
-        public ResponseFactory ResponseFactory { get; }
+        public ResponseFactory ResponseFactory => ((dynamic)_helperClient.Transport).ResponseFactory;
 
         /// <summary>
         /// Constructor
         /// </summary>
         public ElasticsearchInterceptingConnection()
         {
-            ResponseFactory = new ElasticsearchResponseFactory();
+            // Create a helper client to access the ResponseFactory
+            _helperClient = new ElasticsearchClient();
         }
 
         /// <summary>
@@ -223,7 +225,7 @@ namespace NCI.OCPL.Api.Common.Testing
         /// <summary>
         /// Synchronous request implementation
         /// </summary>
-        public TResponse Request<TResponse>(Endpoint endpoint, BoundConfiguration boundConfiguration, PostData? postData, CancellationToken cancellationToken = default)
+        public TResponse Request<TResponse>(Endpoint endpoint, BoundConfiguration boundConfiguration, PostData? postData)
             where TResponse : TransportResponse, new()
         {
             using(ResponseData responseData = new ResponseData())
@@ -233,9 +235,18 @@ namespace NCI.OCPL.Api.Common.Testing
               // Ensure we have a stream (even if empty)
               var stream = responseData.Stream ?? new MemoryStream(new byte[0]);
 
-              return ResponseFactory.Create<TResponse>(endpoint, boundConfiguration, postData, null,
-                  responseData.StatusCode, null, stream,
-                  responseData.ResponseMimeType ?? "application/json", 0, null, null);
+              return ResponseFactory.Create<TResponse>(
+                  endpoint,
+                  boundConfiguration,
+                  postData,
+                  null, // exception
+                  responseData.StatusCode,
+                  null, // headers
+                  stream,
+                  responseData.ResponseMimeType ?? "application/json",
+                  0, // content length
+                  null, // thread pool stats
+                  null); // tcp stats
             }
         }
 
@@ -252,23 +263,18 @@ namespace NCI.OCPL.Api.Common.Testing
               // Ensure we have a stream (even if empty)
               var stream = responseData.Stream ?? new MemoryStream(new byte[0]);
 
-              return await Task.FromResult(ResponseFactory.Create<TResponse>(endpoint, boundConfiguration, postData, null,
-                  responseData.StatusCode, null, stream,
-                  responseData.ResponseMimeType ?? "application/json", 0, null, null));
-            }
-        }        /// <summary>
-        /// Helper to read stream to byte array
-        /// </summary>
-        private byte[] ReadStreamToBytes(Stream stream)
-        {
-            if (stream == null)
-                return new byte[0];
-
-            stream.Position = 0;
-            using (var memoryStream = new MemoryStream())
-            {
-                stream.CopyTo(memoryStream);
-                return memoryStream.ToArray();
+              return await Task.FromResult(ResponseFactory.Create<TResponse>(
+                  endpoint,
+                  boundConfiguration,
+                  postData,
+                  null, // exception
+                  responseData.StatusCode,
+                  null, // headers
+                  stream,
+                  responseData.ResponseMimeType ?? "application/json",
+                  0, // content length
+                  null, // thread pool stats
+                  null)); // tcp stats
             }
         }
 

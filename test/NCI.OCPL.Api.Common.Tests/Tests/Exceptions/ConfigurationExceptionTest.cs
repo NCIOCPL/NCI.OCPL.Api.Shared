@@ -1,7 +1,5 @@
 using Xunit;
 
-using NCI.OCPL.Api.Common;
-
 namespace NCI.OCPL.Api.Common.Tests
 {
   public partial class ConfigurationExceptionTest

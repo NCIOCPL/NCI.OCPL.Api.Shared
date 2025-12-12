@@ -1,4 +1,4 @@
-using Nest;
+using Elastic.Clients.Elasticsearch.Mapping;
 
 namespace NCI.OCPL.Api.Common.Testing
 {

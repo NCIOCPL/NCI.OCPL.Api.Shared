@@ -1,6 +1,6 @@
 using System.IO;
+using System.Text.Json;
 
-using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace NCI.OCPL.Api.Common.Testing
@@ -10,15 +10,10 @@ namespace NCI.OCPL.Api.Common.Testing
     [Fact]
     public void EmptyResponse()
     {
-      JToken expected = JToken.Parse(ElastcsearchTestingTools.MockEmptyResponseString);
-      JToken actual;
+      JsonDocument expected = JsonDocument.Parse(ElastcsearchTestingTools.MockEmptyResponseString);
+      JsonDocument actual = JsonDocument.Parse(new StreamReader(ElastcsearchTestingTools.MockEmptyResponse).ReadToEnd());
 
-      using(StreamReader sr = new StreamReader(ElastcsearchTestingTools.MockEmptyResponse))
-      {
-        actual = JToken.Parse(sr.ReadToEnd());
-      }
-
-      Assert.Equal(expected, actual, new JTokenEqualityComparer());
+      Assert.Equivalent(expected, actual, strict: true);
     }
   }
 }

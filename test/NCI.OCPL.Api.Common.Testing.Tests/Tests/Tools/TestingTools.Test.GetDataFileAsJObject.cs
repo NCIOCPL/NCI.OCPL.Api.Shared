@@ -1,7 +1,7 @@
 using System;
 using System.IO;
+using System.Text.Json;
 
-using Newtonsoft.Json.Linq;
 using Xunit;
 
 namespace NCI.OCPL.Api.Common.Testing
@@ -12,7 +12,7 @@ namespace NCI.OCPL.Api.Common.Testing
     public void GetDataFileAsJObject_Null()
     {
       Assert.Throws<ArgumentNullException>(
-        () => TestingTools.GetDataFileAsJObject(null)
+        () => TestingTools.GetDataFileAsJsonDocument(null)
       );
     }
 
@@ -20,7 +20,7 @@ namespace NCI.OCPL.Api.Common.Testing
     public void GetDataFileAsJObject_NonexistingFile()
     {
       Assert.Throws<FileNotFoundException>(
-        () => TestingTools.GetDataFileAsJObject("NonExistingFile.json")
+        () => TestingTools.GetDataFileAsJsonDocument("NonExistingFile.json")
       );
     }
 
@@ -36,12 +36,12 @@ namespace NCI.OCPL.Api.Common.Testing
                                       }")]
     public void GetDataFileAsJObject_SimpleString(string filename, string expectedValue)
     {
-      JObject expected = JObject.Parse(expectedValue);
+      JsonDocument expected = JsonDocument.Parse(expectedValue);
 
       string path = Path.Join("Tools/TestingTools/GetDataFileAsJObject", filename);
-      JObject actual = TestingTools.GetDataFileAsJObject(path);
+      JsonDocument actual = TestingTools.GetDataFileAsJsonDocument(path);
 
-      Assert.Equal(expected, actual, new JTokenEqualityComparer());
+      Assert.Equivalent(expected, actual, strict: true);
     }
 
   }

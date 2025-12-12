@@ -1,4 +1,4 @@
-using Nest;
+using Elastic.Clients.Elasticsearch;
 using Xunit;
 
 namespace NCI.OCPL.Api.Common.Testing
@@ -20,16 +20,15 @@ namespace NCI.OCPL.Api.Common.Testing
     [InlineData(408, false)]
     async public void GetErrorElasticClient_InvalidResponse(int returnCode, bool expectedValid)
     {
-      IElasticClient client = ElasticTools.GetErrorElasticClient(returnCode);
-      Indices index = Indices.Index(new string[] { "someIndex" });
-      SearchRequest request = new SearchRequest(index)
+      ElasticsearchClient client = ElasticTools.GetErrorElasticClient(returnCode);
+      SearchRequest request = new SearchRequest("someIndex")
       {
-        Query = new TermQuery{Field = "someField", Value = "someValue"}
+        Query = new TermQuery("someField") { Value = "someValue" }
       };
 
-      ISearchResponse<TestType> response = await client.SearchAsync<TestType>(request);
+      SearchResponse<TestType> response = await client.SearchAsync<TestType>(request);
 
-      Assert.Equal(expectedValid, response.IsValid);
+      Assert.Equal(expectedValid, response.IsValidResponse);
     }
   }
 }

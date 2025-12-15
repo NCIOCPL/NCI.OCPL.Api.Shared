@@ -1,9 +1,8 @@
 using System;
 
-using Elasticsearch.Net;
+using Xunit;
 
 using NCI.OCPL.Api.Common.Testing;
-using Xunit;
 
 namespace NCI.OCPL.Api.Common
 {

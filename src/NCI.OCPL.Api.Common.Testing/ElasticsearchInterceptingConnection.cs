@@ -75,7 +75,7 @@ namespace NCI.OCPL.Api.Common.Testing
         }
 
         private Dictionary<Type, object> _callbackHandlers = new Dictionary<Type, object>();
-        private Action<string, ResponseData>? _defCallbackHandler = null;
+        private Action<RequestData, object>? _defCallbackHandler = null;
         private readonly ElasticsearchClient _helperClient;
 
         /// <summary>
@@ -106,11 +106,11 @@ namespace NCI.OCPL.Api.Common.Testing
         /// </summary>
         /// <typeparam name="TReturn"></typeparam>
         /// <param name="callback"></param>
-        public void RegisterRequestHandlerForType<TReturn>(Action<string, ResponseData> callback)
+        public void RegisterRequestHandlerForType<TReturn>(Action<RequestData, ResponseData> callback)
             where TReturn : class
         {
             Type returnType = typeof(TReturn);
-            Type? handlerType = null;
+            Type handlerType = null;
 
             //Loop through the register handlers and see if our type is registered, OR
             //if a base class is registered.
@@ -144,7 +144,7 @@ namespace NCI.OCPL.Api.Common.Testing
         /// isn't registered.
         /// </summary>
         /// <param name="callback"></param>
-        public void RegisterDefaultHandler(Action<string, ResponseData> callback)
+        public void RegisterDefaultHandler(Action<RequestData, object> callback)
         {
             if (_defCallbackHandler != null)
                 throw new ArgumentException("Cannot add more than one default handler");
@@ -157,7 +157,7 @@ namespace NCI.OCPL.Api.Common.Testing
         /// but the ResponseBuilder class required of those methods is static (it not only can't be mocked,
         /// it can't even be passed in), rendering both methods untestable. Making this one protected at least
         /// allows the real logic to be tested.
-        protected void ProcessRequest<TReturn>(Endpoint endpoint, ResponseData responseData)
+        protected void ProcessRequest<TReturn>(RequestData requestData, ResponseData responseData)
             where TReturn : class
         {
             Type returnType = typeof(TReturn);
@@ -171,11 +171,11 @@ namespace NCI.OCPL.Api.Common.Testing
                     {
                         foundHandler = true;
 
-                        Action<string, ResponseData> callback =
-                            (Action<string, ResponseData>)_callbackHandlers[typeof(TReturn)];
+                        Action<RequestData, ResponseData> callback =
+                            (Action<RequestData, ResponseData>)_callbackHandlers[typeof(TReturn)];
 
                         callback(
-                            endpoint.ToString(),
+                            requestData,
                             responseData
                         );
 
@@ -188,7 +188,7 @@ namespace NCI.OCPL.Api.Common.Testing
             {
                 foundHandler = true;
                 _defCallbackHandler(
-                    endpoint.ToString(),
+                    requestData,
                     responseData
                 );
             }

@@ -3,8 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
-using Nest;
-
+using Elastic.Clients.Elasticsearch;
 
 namespace integration_test_harness.Controllers
 {
@@ -14,7 +13,7 @@ namespace integration_test_harness.Controllers
   [Route("test")]
   public class TestController : ControllerBase
   {
-    private readonly IElasticClient _elasticClient;
+    private readonly ElasticsearchClient _elasticClient;
 
     private readonly ESIndexOptions _indexConfig;
 
@@ -29,7 +28,7 @@ namespace integration_test_harness.Controllers
     /// <param name="elasticClient">Elasticsearch client instance.</param>
     /// <param name="config">Configuration/settings for the query.</param>
     /// <returns></returns>
-    public TestController(IElasticClient elasticClient, IOptions<ESIndexOptions> config)
+    public TestController(ElasticsearchClient elasticClient, IOptions<ESIndexOptions> config)
       => (_elasticClient, _indexConfig) = (elasticClient, config.Value);
 
     /// <summary>
@@ -40,13 +39,13 @@ namespace integration_test_harness.Controllers
     {
       // Again, don't put Elasticsearch queries into the controller. This is only being
       // done in order to keep the test harness super-simple.
-      IndexName index = Indices.Index(this._indexConfig.AliasName);
+      Indices index = Indices.Index(this._indexConfig.AliasName);
 
-      IGetResponse<CustomSerializationModel> resp = null;
+      GetResponse<CustomSerializationModel> resp = null;
 
       try
       {
-          IGetRequest  req = new GetRequest(index, identifier);
+          GetRequest req = new GetRequest(index, identifier);
           resp = await _elasticClient.GetAsync<CustomSerializationModel>(req);
       }
       catch (System.Exception)

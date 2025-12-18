@@ -1,5 +1,3 @@
-using Elastic.Clients.Elasticsearch.Mapping;
-
 namespace NCI.OCPL.Api.Common.Testing
 {
   public partial class ElasticToolsTest
@@ -13,7 +11,6 @@ namespace NCI.OCPL.Api.Common.Testing
       /// The Backend ID for this item
       /// </summary>
       /// <returns></returns>
-      [Text(Name = "term")]
       public string Term { get; set; }
     }
   }

@@ -1,4 +1,5 @@
 using Elastic.Clients.Elasticsearch;
+using Elastic.Clients.Elasticsearch.QueryDsl;
 using Xunit;
 
 namespace NCI.OCPL.Api.Common.Testing
@@ -23,7 +24,7 @@ namespace NCI.OCPL.Api.Common.Testing
       ElasticsearchClient client = ElasticTools.GetErrorElasticClient(returnCode);
       SearchRequest request = new SearchRequest("someIndex")
       {
-        Query = new TermQuery("someField") { Value = "someValue" }
+        Query = new TermQuery { Field = "someField", Value = "someValue" }
       };
 
       SearchResponse<TestType> response = await client.SearchAsync<TestType>(request);

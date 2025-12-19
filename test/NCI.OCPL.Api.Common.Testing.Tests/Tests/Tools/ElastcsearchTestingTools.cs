@@ -1,5 +1,5 @@
 using System.IO;
-using System.Text.Json;
+using System.Text.Json.Nodes;
 
 using Xunit;
 
@@ -7,13 +7,20 @@ namespace NCI.OCPL.Api.Common.Testing
 {
   public partial class ElastcsearchTestingToolsTest
   {
+    /**
+      * Test to ensure that the mock empty response matches the original string.
+      */
     [Fact]
     public void EmptyResponse()
     {
-      JsonDocument expected = JsonDocument.Parse(ElastcsearchTestingTools.MockEmptyResponseString);
-      JsonDocument actual = JsonDocument.Parse(new StreamReader(ElastcsearchTestingTools.MockEmptyResponse).ReadToEnd());
+      // Parse the string version of an empty response.
+      JsonNode expected = JsonNode.Parse(ElastcsearchTestingTools.MockEmptyResponseString);
 
-      Assert.Equivalent(expected, actual, strict: true);
+      // Parse what comes back as a stream.
+      JsonNode actual = JsonNode.Parse(new StreamReader(ElastcsearchTestingTools.MockEmptyResponse).ReadToEnd());
+
+      // Compare JSON structures - JsonNode.DeepEquals ignores property order.
+      Assert.True(JsonNode.DeepEquals(expected, actual), "JSON structures do not match.");
     }
   }
 }

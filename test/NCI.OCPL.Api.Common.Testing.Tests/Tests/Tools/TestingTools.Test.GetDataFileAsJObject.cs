@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using System.Text.Json;
-
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace NCI.OCPL.Api.Common.Testing
@@ -36,12 +36,15 @@ namespace NCI.OCPL.Api.Common.Testing
                                       }")]
     public void GetDataFileAsJObject_SimpleString(string filename, string expectedValue)
     {
-      JsonDocument expected = JsonDocument.Parse(expectedValue);
+      JsonNode expected = JsonNode.Parse(expectedValue);
 
       string path = Path.Join("Tools/TestingTools/GetDataFileAsJObject", filename);
       JsonDocument actual = TestingTools.GetDataFileAsJsonDocument(path);
 
-      Assert.Equivalent(expected, actual, strict: true);
+      // We need to convert JsonDocument to JsonNode to do a deep comparison.
+      JsonNode actualNode = JsonNode.Parse(actual.RootElement.GetRawText());
+
+      Assert.True(JsonNode.DeepEquals(expected, actualNode), "JSON structures do not match.");
     }
 
   }

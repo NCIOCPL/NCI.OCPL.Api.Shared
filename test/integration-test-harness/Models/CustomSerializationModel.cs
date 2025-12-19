@@ -5,6 +5,7 @@ namespace integration_test_harness
   /// <summary>
   /// Demonstration of Elasticsearch serialization.
   /// </summary>
+  [JsonConverter(typeof(CustomJsonConverter))]
   public class CustomSerializationModel
   {
     /// <summary>
@@ -16,7 +17,6 @@ namespace integration_test_harness
     /// Property which uses custom serialization to convert an array
     /// to a single value.
     /// </summary>
-    [JsonConverter(typeof(CustomJsonConverter))]
     public string Custom { get; set; }
   }
 }

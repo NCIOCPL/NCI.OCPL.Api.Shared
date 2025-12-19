@@ -1,6 +1,7 @@
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Http;
 
 namespace integration_test_harness
 {
@@ -9,46 +10,72 @@ namespace integration_test_harness
   /// Converts a JSON element containing either a single string, or an array of strings, into
   /// a single string.
   /// </summary>
-  public class CustomJsonConverter : JsonConverter<string>
+  public class CustomJsonConverter : JsonConverter<CustomSerializationModel>
   {
     /// <summary>
-    /// Responsible for reading a JSON element containing either a single string or an array of strings
-    /// and converting it into a single string by discarding all but the first one.
+    /// Responsible for deserialinng CustomSerializationModel, handling the tricky caso of
+    /// a custom JSON element containing either a single string or an array of strings
+    /// and (either way) converting it to a single string.
     /// </summary>
     /// <param name="reader">The Utf8JsonReader to read from.</param>
     /// <param name="typeToConvert">Type of the destination object (always System.String).</param>
     /// <param name="options">The serializer options.</param>
     /// <returns></returns>
-    public override string Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override CustomSerializationModel Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-      // If it's just a string, return the value.
-      if (reader.TokenType == JsonTokenType.String)
+      var model = new CustomSerializationModel();
+
+      while(reader.Read() && reader.TokenType != JsonTokenType.EndObject)
       {
-        reader.GetString(); // consume the value
-        return "Took the string path";
-      }
-      else
-      {
-        // Otherwise, save the first value and skip past the rest.
-        reader.Read(); // Move to first element
-        string value = reader.GetString();
-        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        if (reader.TokenType == JsonTokenType.PropertyName)
         {
-          // consume remaining array elements
+          if(reader.ValueTextEquals("default"))
+          {
+            reader.Read(); // Move to property value
+            model.Default = "Took the string path";
+            continue;
+          }
+          else if (reader.ValueTextEquals("custom"))
+          {
+            reader.Read(); // Move to property value
+            if(reader.TokenType == JsonTokenType.String)
+            {
+              // This is the simple string path, so we'll report that fact,
+              // and deliberately ignore the actual value for demonstration purposes.
+              model.Custom = "Took the string path";
+            }
+            else
+            {
+              // This is the array path, so we'll report that fact, advance to the
+              // end of the array, and again, ignore the actual values for demonstration purposes.
+              model.Custom = "Took the not string path";
+              while(reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+              {
+                // consume array elements
+              }
+            }
+          }
         }
-        return "Took the not string path";
       }
+
+      return model;
     }
 
     /// <summary>
-    /// Writes the JSON representation of the object.
+    /// Writes the JSON representation of the object using default serialization.
     /// </summary>
     /// <param name="writer">The Utf8JsonWriter to write to.</param>
     /// <param name="value">The value.</param>
     /// <param name="options">The serializer options.</param>
-    public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)
+    public override void Write(Utf8JsonWriter writer, CustomSerializationModel value, JsonSerializerOptions options)
     {
-      throw new NotImplementedException("This converter not intended for writing.");
+      // Perform default serialization by writing each property manually.
+      writer.WriteStartObject();
+
+      writer.WriteString("default", value.Default);
+      writer.WriteString("custom", value.Custom);
+
+      writer.WriteEndObject();
     }
   }
 }

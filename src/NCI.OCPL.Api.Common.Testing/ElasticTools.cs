@@ -30,7 +30,7 @@ namespace NCI.OCPL.Api.Common.Testing
             // Headers required to identify the server as a genuine Elasticsearch product.
             var headers = new Dictionary<string, IEnumerable<string>>
             {
-                { "X-Elastic-Product", new[] { "Elasticsearch" } }
+                { "x-elastic-product", new[] { "Elasticsearch" } }
             };
 
             // Setup ElasticSearch stuff using the contents of the JSON file as the client response.
@@ -60,7 +60,7 @@ namespace NCI.OCPL.Api.Common.Testing
           // Headers required to identify the server as a genuine Elasticsearch product.
           var headers = new Dictionary<string, IEnumerable<string>>
           {
-              { "X-Elastic-Product", new[] { "Elasticsearch" } }
+              { "x-elastic-product", new[] { "Elasticsearch" } }
           };
 
           // Setup ElasticSearch stuff using the contents of the JSON file as the client response.

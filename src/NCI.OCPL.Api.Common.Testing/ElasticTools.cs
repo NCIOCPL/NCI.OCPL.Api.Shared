@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
@@ -26,8 +27,14 @@ namespace NCI.OCPL.Api.Common.Testing
             //from the server.
             var pool = new SingleNodePool(new Uri("http://localhost:9200"));
 
+            // Headers required to identify the server as a genuine Elasticsearch product.
+            var headers = new Dictionary<string, IEnumerable<string>>
+            {
+                { "X-Elastic-Product", new[] { "Elasticsearch" } }
+            };
+
             // Setup ElasticSearch stuff using the contents of the JSON file as the client response.
-            InMemoryRequestInvoker conn = new InMemoryRequestInvoker(responseBody);
+            InMemoryRequestInvoker conn = new InMemoryRequestInvoker(responseBody, headers: headers);
 
             var connectionSettings = new ElasticsearchClientSettings(pool, conn);
 
@@ -48,10 +55,16 @@ namespace NCI.OCPL.Api.Common.Testing
           var pool = new SingleNodePool(new Uri("http://localhost:9200"));
 
           //Get Response JSON
-          byte[] responseBody = new byte[0];
+          byte[] responseBody = Array.Empty<byte>();
+
+          // Headers required to identify the server as a genuine Elasticsearch product.
+          var headers = new Dictionary<string, IEnumerable<string>>
+          {
+              { "X-Elastic-Product", new[] { "Elasticsearch" } }
+          };
 
           // Setup ElasticSearch stuff using the contents of the JSON file as the client response.
-          InMemoryRequestInvoker conn = new InMemoryRequestInvoker(responseBody, statusCode);
+          InMemoryRequestInvoker conn = new InMemoryRequestInvoker(responseBody, statusCode: statusCode, headers: headers);
 
           var connectionSettings = new ElasticsearchClientSettings(pool, conn);
 

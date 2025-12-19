@@ -39,7 +39,7 @@ namespace integration_test_harness.Controllers
     {
       // Again, don't put Elasticsearch queries into the controller. This is only being
       // done in order to keep the test harness super-simple.
-      Indices index = Indices.Index(this._indexConfig.AliasName);
+      IndexName index = this._indexConfig.AliasName;
 
       GetResponse<CustomSerializationModel> resp = null;
 

@@ -1,5 +1,4 @@
-using Nest;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 namespace integration_test_harness
 {
@@ -11,14 +10,12 @@ namespace integration_test_harness
     /// <summary>
     /// Property which uses default serialization.
     /// </summary>
-    [Text(Name = "default")]
     public string Default { get; set; }
 
     /// <summary>
     /// Property which uses custom serialization to convert an array
     /// to a single value.
     /// </summary>
-    [Text(Name = "custom")]
     [JsonConverter(typeof(CustomJsonConverter))]
     public string Custom { get; set; }
   }

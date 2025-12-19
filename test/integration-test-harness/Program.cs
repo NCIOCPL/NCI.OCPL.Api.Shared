@@ -1,4 +1,6 @@
-﻿using NCI.OCPL.Api.Common;
+﻿using Microsoft.Extensions.Hosting;
+
+using NCI.OCPL.Api.Common;
 
 namespace integration_test_harness
 {

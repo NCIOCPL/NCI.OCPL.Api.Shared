@@ -1,4 +1,4 @@
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace NCI.OCPL.Api.Common
 {
@@ -19,7 +19,7 @@ namespace NCI.OCPL.Api.Common
         /// <returns>A <see cref="T:System.String"/> that represents the current <see cref="T:NCI.OCPL.Api.Common.Models.ErrorMessage"/>.</returns>
         public override string ToString()
         {
-            return JsonConvert.SerializeObject(this);
+            return JsonSerializer.Serialize(this);
         }
     }
 }

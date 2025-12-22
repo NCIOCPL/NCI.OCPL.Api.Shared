@@ -31,8 +31,7 @@ namespace integration_test_harness
         {
           if(reader.ValueTextEquals("default"))
           {
-            reader.Read(); // Move to property value
-            model.Default = "Took the string path";
+            model.Default = reader.Read() ? reader.GetString() : null;
             continue;
           }
           else if (reader.ValueTextEquals("custom"))
@@ -42,13 +41,14 @@ namespace integration_test_harness
             {
               // This is the simple string path, so we'll report that fact,
               // and deliberately ignore the actual value for demonstration purposes.
-              model.Custom = "Took the string path";
+              model.Custom = reader.GetString();
             }
             else
             {
-              // This is the array path, so we'll report that fact, advance to the
-              // end of the array, and again, ignore the actual values for demonstration purposes.
-              model.Custom = "Took the not string path";
+              // For the array path, read the first value, then skip to end.
+              // For simplicity, this assumes the array contains at least one value,
+              // a real implementation would need to be more robust.
+              model.Custom = reader.Read() ? reader.GetString() : null;
               while(reader.Read() && reader.TokenType != JsonTokenType.EndArray)
               {
                 // consume array elements
@@ -69,12 +69,9 @@ namespace integration_test_harness
     /// <param name="options">The serializer options.</param>
     public override void Write(Utf8JsonWriter writer, CustomSerializationModel value, JsonSerializerOptions options)
     {
-      // Perform default serialization by writing each property manually.
       writer.WriteStartObject();
-
       writer.WriteString("default", value.Default);
       writer.WriteString("custom", value.Custom);
-
       writer.WriteEndObject();
     }
   }

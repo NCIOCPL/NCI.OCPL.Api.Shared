@@ -1,3 +1,5 @@
+using System.Threading.Tasks;
+
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.QueryDsl;
 using Xunit;
@@ -19,7 +21,7 @@ namespace NCI.OCPL.Api.Common.Testing
     [InlineData(403, false)]
     [InlineData(404, false)]
     [InlineData(408, false)]
-    async public void GetErrorElasticClient_InvalidResponse(int returnCode, bool expectedValid)
+    async public Task GetErrorElasticClient_InvalidResponse(int returnCode, bool expectedValid)
     {
       ElasticsearchClient client = ElasticTools.GetErrorElasticClient(returnCode);
       SearchRequest request = new SearchRequest("someIndex")

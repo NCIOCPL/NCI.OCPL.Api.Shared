@@ -165,6 +165,13 @@ jobs:
 
               echo "API is up"
 
+      - name: Save the API Log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: api_log
+          path: integration-tests/target/api_log.txt
+
       - name: Run tests requiring no data be present.
         ## Normally bash runs with -e which exits the shell upon hitting
         ## an error which breaks our ability to capture those errors.

@@ -143,10 +143,11 @@ jobs:
         run: |
               ## TODO: This should become a GitHub Action.
 
-              ## Start the app and log output
+              ## Start the app and log output while recording code coverage.
               ## NOTE: We must change directory because while you can call `dotnet "${APP_PATH}/${APP_ASSEMBLY}"`
               ## it will not find the appsettings.json, so we must cd into the APP_PATH first
-              cd $APP_PATH && dotnet $APP_ASSEMBLY > ../integration-tests/target/api_log.txt 2>&1 &
+              cd $APP_PATH && \
+                dotnet coverlet . --target "dotnet" --targetargs "$APP_ASSEMBLY"  --format lcov --output "$GITHUB_WORKSPACE/integration-coverage.lcov" --include-directory "." --include "[NCI.OCPL.Api.Common]*"   > ../integration-tests/target/api_log.txt 2>&1 &
 
               time_waited=1
               echo "Checking status of ${API_URL}."
@@ -208,6 +209,12 @@ jobs:
         with:
           name: integration-test-results
           path: integration-tests/target
+
+      - name: Upload Code Coverage Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-coverage
+          path: integration-coverage.lcov
 
       - name: Fail build on bad tests
         shell: bash

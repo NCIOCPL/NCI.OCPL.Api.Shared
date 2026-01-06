@@ -39,10 +39,10 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
@@ -109,17 +109,27 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
-      - name: Install Coverlet tool
+      - name: Install reporting tools
         shell: bash
         run: |
               dotnet tool install --global coverlet.console --version 6.*
+              dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.*
+
+      - name: Retrieve unit test coverage reports
+        uses: actions/download-artifact@v7
+        with:
+          name: coverage-NCI.OCPL.Api.Common-ubuntu-latest
+
+      - name: Rename unit test coverage file
+        run: |
+              mv "${{github.workspace}}/NCI.OCPL.Api.Common.lcov" "${{github.workspace}}/integration-coverage.lcov"
 
       - name: Setup test output directory
         shell: bash
@@ -155,9 +165,9 @@ jobs:
                 coverlet .  --target "dotnet" \
                             --targetargs "$APP_ASSEMBLY"  \
                             --format lcov \
-                            --output "$GITHUB_WORKSPACE/integration-coverage.lcov" \
                             --include-directory "." \
-                            --include "[NCI.OCPL.Api.Common]*"   > ../integration-tests/target/api_log.txt 2>&1 &
+                            --include "[NCI.OCPL.Api.Common]*" \
+                            --merge-with "${{github.workspace}}/integration-coverage.lcov" > ../integration-tests/target/api_log.txt 2>&1 &
 
               time_waited=1
               echo "Checking status of ${API_URL}."
@@ -175,11 +185,11 @@ jobs:
 
               echo "API is up"
 
-      - name: Save the API Log
+      - name: Save the API startup Log
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: api_log
+          name: integration-tests-api-startup-log
           path: integration-tests/target/api_log.txt
 
       - name: Run tests requiring no data be present.
@@ -237,7 +247,19 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: integration-coverage
-          path: integration-coverage.lcov
+          path: ${{github.workspace}}/integration-coverage.lcov
+
+      - name: Upload 2 canoe
+        uses: actions/upload-artifact@v6
+        with:
+          name: debuggage
+          path: ${{github.workspace}}/NCI.OCPL.Api.Common.lcov
+
+      - name: Debug canoe
+        run: |
+          find $GITHUB_WORKSPACE -name '*.lcov'
+          echo GITHBUB_WORKSPACE=$GITHUB_WORKSPACE
+          ls -l *.lcov
 
       - name: Fail build on bad tests
         shell: bash
@@ -265,8 +287,6 @@ jobs:
     runs-on: windows-latest
     outputs:
       should_publish: ${{ steps.set_outputs.outputs.should_publish }}
-    needs:
-      - integration_tests
 
     steps:
       - name: Set outputs
@@ -316,12 +336,12 @@ jobs:
           path: ${{ github.workspace }}
 
       - name: Download global.json
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: source
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: source/global.json
           source-url: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"

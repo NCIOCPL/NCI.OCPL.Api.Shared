@@ -58,7 +58,7 @@ jobs:
                 dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=../../${{matrix.package}}.lcov   test/${{matrix.package}}.Tests
               fi
 
-      - name: Save Code Coverage Output
+      - name: Save code coverage output
         # Coverage output isn't created on Windows, so don't upload it.
         if: matrix.operating-system != 'windows-latest'
         uses: actions/upload-artifact@v6
@@ -116,11 +116,12 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Install reporting tools
+      - name: Set up reporting tools
         shell: bash
         run: |
               dotnet tool install --global coverlet.console --version 6.*
               dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.*
+              mkdir -p "${{github.workspace}}/coverage-report"
 
       - name: Retrieve unit test coverage reports
         uses: actions/download-artifact@v7
@@ -156,8 +157,6 @@ jobs:
           APP_ASSEMBLY: integration-test-harness.dll
         shell: bash
         run: |
-              ## TODO: This should become a GitHub Action.
-
               ## Start the app and log output while recording code coverage.
               ## NOTE: We must change directory because while you can call `dotnet "${APP_PATH}/${APP_ASSEMBLY}"`
               ## it will not find the appsettings.json, so we must cd into the APP_PATH first
@@ -218,9 +217,6 @@ jobs:
               ./integration-tests/bin/load-integration-data.sh
 
       - name: Run Integration Test
-        ## Normally bash runs with -e which exits the shell upon hitting
-        ## an error which breaks our ability to capture those errors.
-        shell: bash --noprofile --norc -o pipefail {0}
         run: |
               ## Run Karate
               cd integration-tests && ./bin/karate ./features
@@ -238,39 +234,33 @@ jobs:
               curl -X POST http://localhost:5000/shutdown
 
       - name: Upload Integration test results
+        if: always()
         uses: actions/upload-artifact@v6
         with:
           name: integration-test-results
           path: integration-tests/target
 
-      - name: Upload Code Coverage Output
+      - name: Upload code coverage data
+        if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: integration-coverage
+          name: coverage-integration
           path: ${{github.workspace}}/integration-coverage.lcov
 
-      - name: Upload 2 canoe
+      - name: Generate coverage report
+        run: |
+              reportgenerator \
+                -reports:${{github.workspace}}/integration-coverage.lcov \
+                -targetdir:${{github.workspace}}/coverage-report \
+                -reporttypes:Html \
+                -sourcedirs:${{github.workspace}} \
+                -verbosity:Verbose
+
+      - name: Upload Coverage Report
         uses: actions/upload-artifact@v6
         with:
-          name: debuggage
-          path: ${{github.workspace}}/NCI.OCPL.Api.Common.lcov
-
-      - name: Debug canoe
-        run: |
-          find $GITHUB_WORKSPACE -name '*.lcov'
-          echo GITHBUB_WORKSPACE=$GITHUB_WORKSPACE
-          ls -l *.lcov
-
-      - name: Fail build on bad tests
-        shell: bash
-        run: |
-              ## Check if we had errors on the test step, and if so, fail the job
-              if [ $TEST_EXIT_CODE_1 -ne 0 ] || [ $TEST_EXIT_CODE_2 -ne 0 ]; then
-                echo "Tests Failed -- See Run Integration Test step or integration-test-results artifact for more information"
-                exit $TEST_EXIT_CODE
-              else
-                echo "Tests passed"
-              fi
+          name: Code Coverage Report
+          path: ${{github.workspace}}/coverage-report
 
   determine_whether_to_publish:
 

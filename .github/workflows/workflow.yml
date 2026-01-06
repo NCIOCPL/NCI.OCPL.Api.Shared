@@ -61,7 +61,7 @@ jobs:
       - name: Save Code Coverage Output
         # Coverage output isn't created on Windows, so don't upload it.
         if: matrix.operating-system != 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-${{matrix.package}}-${{ matrix.operating-system }}
           path: ${{matrix.package}}.lcov
@@ -86,7 +86,7 @@ jobs:
             output-name: "${{ github.workspace }}/out/wwwroot/build-info.json"
 
       - name: Upload Published Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{matrix.package}}-${{ matrix.operating-system }}
           path: out
@@ -115,6 +115,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           global-json-file: global.json
+
+      - name: Install Coverlet tool
+        shell: bash
+        run: |
+              dotnet tool install --global coverlet.console --version 6.*
 
       - name: Setup test output directory
         shell: bash
@@ -147,7 +152,12 @@ jobs:
               ## NOTE: We must change directory because while you can call `dotnet "${APP_PATH}/${APP_ASSEMBLY}"`
               ## it will not find the appsettings.json, so we must cd into the APP_PATH first
               cd $APP_PATH && \
-                dotnet coverlet . --target "dotnet" --targetargs "$APP_ASSEMBLY"  --format lcov --output "$GITHUB_WORKSPACE/integration-coverage.lcov" --include-directory "." --include "[NCI.OCPL.Api.Common]*"   > ../integration-tests/target/api_log.txt 2>&1 &
+                coverlet .  --target "dotnet" \
+                            --targetargs "$APP_ASSEMBLY"  \
+                            --format lcov \
+                            --output "$GITHUB_WORKSPACE/integration-coverage.lcov" \
+                            --include-directory "." \
+                            --include "[NCI.OCPL.Api.Common]*"   > ../integration-tests/target/api_log.txt 2>&1 &
 
               time_waited=1
               echo "Checking status of ${API_URL}."
@@ -211,14 +221,20 @@ jobs:
               echo TEST_EXIT_CODE_2=$? >> $GITHUB_ENV
               exit 0
 
+      - name: Stop API
+        shell: bash
+        run: |
+              ## Cause a **controlled** shutdown the API so coverlet can get the coverage statistics.
+              curl -X POST http://localhost:5000/shutdown
+
       - name: Upload Integration test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: integration-test-results
           path: integration-tests/target
 
       - name: Upload Code Coverage Output
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: integration-coverage
           path: integration-coverage.lcov

@@ -16,6 +16,6 @@
 
     <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.19.*" />
 
-    <PackageReference Include="NSwag.AspNetCore" Version="13.11.*" />
+    <PackageReference Include="NSwag.AspNetCore" Version="13.*" />
   </ItemGroup>
 </Project>

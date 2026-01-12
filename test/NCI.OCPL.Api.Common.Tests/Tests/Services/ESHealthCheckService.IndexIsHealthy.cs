@@ -139,7 +139,7 @@ namespace NCI.OCPL.Api.Common.Tests
     {
       // Arrange
       string aliasName = "test-alias";
-      ElasticsearchClient client = GetExceptionThrowingClient();
+      ElasticsearchClient client = GetFailedConnectionClient();
       Mock<IESAliasNameProvider> mockAliasProvider = new Mock<IESAliasNameProvider>();
       mockAliasProvider.Setup(p => p.Name).Returns(aliasName);
       Mock<ILogger<ESHealthCheckService>> mockLogger = new Mock<ILogger<ESHealthCheckService>>();
@@ -197,9 +197,9 @@ namespace NCI.OCPL.Api.Common.Tests
     }
 
     /// <summary>
-    /// Gets a mock ElasticsearchClient that throws an exception.
+    /// Gets a mock ElasticsearchClient simulating a failed connection.
     /// </summary>
-    private static ElasticsearchClient GetExceptionThrowingClient()
+    private static ElasticsearchClient GetFailedConnectionClient()
     {
       var pool = new SingleNodePool(new Uri("http://localhost:9200"));
 

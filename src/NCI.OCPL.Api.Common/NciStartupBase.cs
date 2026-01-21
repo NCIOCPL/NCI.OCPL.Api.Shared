@@ -71,10 +71,11 @@ namespace NCI.OCPL.Api.Common
       // This will inject an IElasticClient using our configuration into any
       // controllers that take an IElasticClient parameter into its constructor.
       //
-      // AddTransient means that it will instantiate a new instance of our client
-      // for each instance of the controller.  So the function below will be called
-      // on each request.
-      services.AddTransient<IElasticClient>(p =>
+      // AddSingleton means that only once instance of the ElasticClient will be
+      // created for the lifetime of the application.  This is the recommended
+      // approach per the ElasticSearch documentation. (Creating multiple clients
+      // can cause port exhaustion.)
+      services.AddSingleton<IElasticClient>(p =>
       {
 
         // Get the ElasticSearch credentials.

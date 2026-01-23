@@ -16,6 +16,9 @@ on:
   ## Any pull request.
   pull_request:
 
+permissions:
+  contents: read
+
 # Only run one instance of this workflow at a time per branch.
 concurrency:
   group: ${{ github.ref_name }}-${{ github.workflow }}
@@ -95,7 +98,7 @@ jobs:
     needs: test_build_release
     services:
       elasticsearch:
-        image: elasticsearch:7.17.5
+        image: elasticsearch:7.17.28
         env:
           ## Pass elasticsearch options via environment variables.
           discovery.type: single-node
@@ -261,6 +264,9 @@ jobs:
 
     name: Publish ${{matrix.package}} as NuGet package.
     runs-on: windows-latest
+    permissions:
+        contents: read
+        packages: write
     needs:
       - determine_whether_to_publish
       - integration_tests
@@ -271,8 +277,6 @@ jobs:
         package:
           - NCI.OCPL.Api.Common
           - NCI.OCPL.Api.Common.Testing
-    permissions:
-      packages: write
 
     steps:
       - name: Download Published Artifact

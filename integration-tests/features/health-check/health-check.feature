@@ -9,4 +9,4 @@ Feature: The library offers an ability to check the health of the Elasticsearch 
     Given path 'HealthCheck'
     When method GET
     Then status 200
-    And match response == true
+    And match response == 'true'

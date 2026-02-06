@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <Version>4.0.0-alpha2</Version>
+    <Version>4.0.0-alpha3</Version>
     <PackageDescription>Common code for use between APIs.</PackageDescription>
     <RepositoryUrl>https://github.com/NCIOCPL/NCI.OCPL.Api.Shared</RepositoryUrl>
     <Authors>National Cancer Institute - Office of Communications and Public Liaison</Authors>
@@ -16,6 +16,6 @@
 
     <PackageReference Include="Elastic.Clients.Elasticsearch" Version="8.19.*" />
 
-    <PackageReference Include="NSwag.AspNetCore" Version="13.*" />
+    <PackageReference Include="NSwag.AspNetCore" Version="14.6.*" />
   </ItemGroup>
 </Project>

@@ -169,7 +169,7 @@ namespace NCI.OCPL.Api.Common
         };
       });
       // This serves the Swagger UI
-      app.UseSwaggerUi3(settings =>
+      app.UseSwaggerUi(settings =>
       {
         // Set this as the default path.
         settings.Path = "";

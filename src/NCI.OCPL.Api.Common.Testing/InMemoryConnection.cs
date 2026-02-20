@@ -23,7 +23,7 @@ namespace NCI.OCPL.Api.Common.Testing
   public class InMemoryConnection : InMemoryRequestInvoker, IRequestInvoker, IDisposable
   {
 
-    private readonly Dictionary<string, IEnumerable<string>> Headers = new Dictionary<string, IEnumerable<string>>
+    private static readonly Dictionary<string, IEnumerable<string>> Headers = new Dictionary<string, IEnumerable<string>>
         {
           { "x-elastic-product", new[] { "Elasticsearch" } }
         };
@@ -40,10 +40,7 @@ namespace NCI.OCPL.Api.Common.Testing
     /// <param name="exception">Simulated exception to report</param>
     /// <param name="contentType">Simulated content type of the response</param>
     public InMemoryConnection(byte[] responseBody, int statusCode = 200, Exception? exception = null, string contentType = "application/json")
-      : base(responseBody, statusCode, exception, contentType, new Dictionary<string, IEnumerable<string>>
-        {
-          { "x-elastic-product", new[] { "Elasticsearch" } }
-        })
+      : base(responseBody, statusCode, exception, contentType, Headers)
     {
     }
 

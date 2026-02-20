@@ -15,6 +15,8 @@ using NCI.OCPL.Api.Common.Models.Options;
 
 using Elastic.Clients.Elasticsearch;
 using Elastic.Transport;
+using System.Text.Json;
+using Elastic.Clients.Elasticsearch.Serialization;
 
 
 namespace NCI.OCPL.Api.Common
@@ -90,8 +92,19 @@ namespace NCI.OCPL.Api.Common
         // redundancy and load balancing.
         var connectionPool = new SniffingNodePool(uris);
 
+        // Callback to set option for the connection settings.
+        static void ConfigureOptions(JsonSerializerOptions options)
+        {
+          // Deserialize from Elasticsearch using snake_case.
+          options.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
+        }
+
         //Return a new instance of an ElasticsearchClient with our settings
-        var settings = new ElasticsearchClientSettings(connectionPool);
+        var settings = new ElasticsearchClientSettings(
+          connectionPool,
+          sourceSerializer: (defaultSerializer, settings) =>
+            new DefaultSourceSerializer(settings, ConfigureOptions)
+        );
 
         //Let's only try and use credentials if the username is set.
         if (!string.IsNullOrWhiteSpace(username))

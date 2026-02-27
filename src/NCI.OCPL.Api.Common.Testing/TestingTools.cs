@@ -31,6 +31,21 @@ namespace NCI.OCPL.Api.Common.Testing
         }
 
         /// <summary>
+        /// Gets a test file from the TestData folder and returns its contents as a string.
+        /// </summary>
+        /// <returns>The contents of the file as a string.</returns>
+        public static string ReadTestFile(string testFile)
+        {
+            //Get the path to the file.
+            string path = GetPathToTestFile(testFile);
+
+            //Get the contents as a string
+            string contents = File.ReadAllText(path);
+
+            return contents;
+        }
+
+        /// <summary>
         /// Gets a test file from the TestData folder as a stream
         /// </summary>
         /// <param name="testFile">The name of the testfile</param>

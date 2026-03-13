@@ -107,7 +107,7 @@ jobs:
     needs: test_build_release
     services:
       elasticsearch:
-        image: elasticsearch:7.17.28
+        image: elasticsearch:8.19.12
         env:
             discovery.type: single-node
             ES_JAVA_OPTS: -Xms750m -Xmx750m

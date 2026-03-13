@@ -8,7 +8,7 @@ Feature: The API library allows for custom deserialization of data retrieved fro
     Given path 'test/custom-serialization/', identifier
     When method get
     Then status 200
-    And match each $.[*].default == 'Default serialization'
+    And match $.default == 'Default serialization'
 
     Examples:
       | identifier    |
@@ -23,6 +23,6 @@ Feature: The API library allows for custom deserialization of data retrieved fro
     And match $.custom == expected
 
     Examples:
-      | identifier    | expected                 |
-      | simple-string | Took the string path     |
-      | has-array     | Took the not string path |
+      | identifier    | expected            |
+      | simple-string | simple-string-value |
+      | has-array     | first-string-value  |

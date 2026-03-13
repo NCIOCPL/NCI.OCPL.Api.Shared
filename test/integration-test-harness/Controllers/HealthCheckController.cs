@@ -1,10 +1,8 @@
 using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 
 using NCI.OCPL.Api.Common;
-
 
 namespace integration_test_harness.Controllers
 {

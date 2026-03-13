@@ -16,11 +16,17 @@ namespace NCI.OCPL.Api.Common
     /// </summary>
     public string Name
     {
-      get { return _name; }
+      get
+      {
+        if (String.IsNullOrWhiteSpace(_name))
+          throw new InvalidOperationException("ES Alias Name has not been set.");
+        return _name;
+      }
+
       set
       {
         if (String.IsNullOrWhiteSpace(value))
-          throw new ArgumentNullException(nameof(Name));
+          throw new ArgumentException($"{nameof(Name)} cannot be null or whitespace.", nameof(Name));
 
         _name = value;
       }

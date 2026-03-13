@@ -18,7 +18,7 @@ In order to consume these packages, you must configure the .Net SDK to retrieve 
 
 ## Shared components
 
-1. In the .Net project's cdirectory, run the command:
+1. In the .Net project's directory, run the command:
     ```bash
     dotnet add package nci.ocpl.api.common
     ```

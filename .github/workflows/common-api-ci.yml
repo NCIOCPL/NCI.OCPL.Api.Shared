@@ -86,7 +86,7 @@ jobs:
             ## directory for build-info.json
             mkdir -p $GITHUB_WORKSPACE/out/${{ inputs.artifact-name }}-api/wwwroot/
 
-            # Copy deploy toool.
+            # Copy deploy tool.
             cp $GITHUB_WORKSPACE/shared/tools/deploy-api.ps1 $GITHUB_WORKSPACE/out/
 
       - name: Record metadata
@@ -107,12 +107,14 @@ jobs:
     needs: test_build_release
     services:
       elasticsearch:
-        image: elasticsearch:7.17.28
+        image: elasticsearch:8.19.12
         env:
             discovery.type: single-node
             ES_JAVA_OPTS: -Xms750m -Xmx750m
-            # Turn off warnings about not using HTTPS.
+            # Turn security settings off for testing. (Allows http instead of https.)
             xpack.security.enabled: false
+            xpack.security.transport.ssl.enabled: false
+            xpack.security.http.ssl.enabled: false
         ports:
           ## NOTE: This will be exposed as a random port referenced below by job.services.elasticsearch.ports[9200]
           - 9200/tcp

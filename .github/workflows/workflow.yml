@@ -1,6 +1,6 @@
 name: Main workflow for building the shared nuget packages.
 on:
-  ## This tries to avoid unessesary pushes to forked repo
+  ## This tries to avoid unnecessary pushes to forked repo
   ## development branches. No sense in a dev building every
   ## time they push for a PR and no one should be working on
   ## common branches in their fork.
@@ -39,10 +39,10 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
 
@@ -58,10 +58,10 @@ jobs:
                 dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=lcov /p:CoverletOutput=../../${{matrix.package}}.lcov   test/${{matrix.package}}.Tests
               fi
 
-      - name: Save Code Coverage Output
+      - name: Save code coverage output
         # Coverage output isn't created on Windows, so don't upload it.
         if: matrix.operating-system != 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-${{matrix.package}}-${{ matrix.operating-system }}
           path: ${{matrix.package}}.lcov
@@ -86,7 +86,7 @@ jobs:
             output-name: "${{ github.workspace }}/out/wwwroot/build-info.json"
 
       - name: Upload Published Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ${{matrix.package}}-${{ matrix.operating-system }}
           path: out
@@ -98,10 +98,15 @@ jobs:
     needs: test_build_release
     services:
       elasticsearch:
-        image: elasticsearch:7.17.28
+        image: elasticsearch:8.19.12
         env:
           ## Pass elasticsearch options via environment variables.
           discovery.type: single-node
+          ES_JAVA_OPTS: -Xms750m -Xmx750m
+          # Turn security settings off for testing. (Allows http instead of https.)
+          xpack.security.enabled: false
+          xpack.security.transport.ssl.enabled: false
+          xpack.security.http.ssl.enabled: false
         ports:
           ## NOTE: This will be exposed as a random port referenced below by job.services.elasticsearch.ports[9200]
           - 9200/tcp
@@ -109,12 +114,28 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
+
+      - name: Set up reporting tools
+        shell: bash
+        run: |
+              dotnet tool install --global coverlet.console --version 6.*
+              dotnet tool install --global dotnet-reportgenerator-globaltool --version 5.*
+              mkdir -p "${{github.workspace}}/coverage-report"
+
+      - name: Retrieve unit test coverage reports
+        uses: actions/download-artifact@v7
+        with:
+          name: coverage-NCI.OCPL.Api.Common-ubuntu-latest
+
+      - name: Rename unit test coverage file
+        run: |
+              mv "${{github.workspace}}/NCI.OCPL.Api.Common.lcov" "${{github.workspace}}/integration-coverage.lcov"
 
       - name: Setup test output directory
         shell: bash
@@ -131,6 +152,7 @@ jobs:
               dotnet publish -c Release -o $GITHUB_WORKSPACE/built-api test/integration-test-harness/
 
       - name: Start API
+        id: start_api
         env:
           Elasticsearch__Servers: http://localhost:${{ job.services.elasticsearch.ports[9200] }}
           ASPNETCORE_LOGGING__CONSOLE__DISABLECOLORS: true
@@ -141,12 +163,18 @@ jobs:
           APP_ASSEMBLY: integration-test-harness.dll
         shell: bash
         run: |
-              ## TODO: This should become a GitHub Action.
-
-              ## Start the app and log output
+              ## Start the app and log output while recording code coverage.
               ## NOTE: We must change directory because while you can call `dotnet "${APP_PATH}/${APP_ASSEMBLY}"`
               ## it will not find the appsettings.json, so we must cd into the APP_PATH first
-              cd $APP_PATH && dotnet $APP_ASSEMBLY > ../integration-tests/target/api_log.txt 2>&1 &
+              cd $APP_PATH && \
+                coverlet .  --target "dotnet" \
+                            --targetargs "$APP_ASSEMBLY"  \
+                            --format lcov \
+                            --include-directory "." \
+                            --include "[NCI.OCPL.Api.Common]*" \
+                            --output "${{github.workspace}}/integration-coverage.lcov" \
+                            --merge-with "${{github.workspace}}/integration-coverage.lcov" > ../integration-tests/target/api_log.txt 2>&1 &
+              echo "API_PID=$!" >> $GITHUB_OUTPUT
 
               time_waited=1
               echo "Checking status of ${API_URL}."
@@ -164,19 +192,18 @@ jobs:
 
               echo "API is up"
 
+      - name: Save the API startup Log
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: integration-tests-api-startup-log
+          path: integration-tests/target/api_log.txt
+
       - name: Run tests requiring no data be present.
-        ## Normally bash runs with -e which exits the shell upon hitting
-        ## an error which breaks our ability to capture those errors.
-        shell: bash --noprofile --norc -o pipefail {0}
+        shell: bash
         run: |
               ## Run Karate
               cd integration-tests && ./bin/karate ./pre-data-features
-
-              ## Store the exit code off so we can pass this step and
-              ## capture the test output in the next step, but still
-              ## fail the entire job
-              echo TEST_EXIT_CODE_1=$? >> $GITHUB_ENV
-              exit 0
 
       - name: Load Data into elasticsearch & prepare for tests
         env:
@@ -190,35 +217,49 @@ jobs:
               ./integration-tests/bin/load-integration-data.sh
 
       - name: Run Integration Test
-        ## Normally bash runs with -e which exits the shell upon hitting
-        ## an error which breaks our ability to capture those errors.
-        shell: bash --noprofile --norc -o pipefail {0}
         run: |
               ## Run Karate
               cd integration-tests && ./bin/karate ./features
 
-              ## Store the exit code off so we can pass this step and
-              ## capture the test output in the next step, but still
-              ## fail the entire job
-              echo TEST_EXIT_CODE_2=$? >> $GITHUB_ENV
-              exit 0
+      - name: Stop API
+        # Always attempt to stop the API to allow coverage data to be written.
+        if: always()
+        shell: bash
+        run: |
+              ## Cause a **controlled** shutdown the API so coverlet can get the coverage statistics.
+              kill -SIGINT ${{ steps.start_api.outputs.API_PID }}
+
+              # Wait for the process to exit
+              wait ${{ steps.start_api.outputs.API_PID }} || true
 
       - name: Upload Integration test results
-        uses: actions/upload-artifact@v4
+        if: always()
+        uses: actions/upload-artifact@v6
         with:
           name: integration-test-results
           path: integration-tests/target
 
-      - name: Fail build on bad tests
-        shell: bash
+      - name: Upload code coverage data
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-integration
+          path: ${{github.workspace}}/integration-coverage.lcov
+
+      - name: Generate coverage report
         run: |
-              ## Check if we had errors on the test step, and if so, fail the job
-              if [ $TEST_EXIT_CODE_1 -ne 0 ] || [ $TEST_EXIT_CODE_2 -ne 0 ]; then
-                echo "Tests Failed -- See Run Integration Test step or integration-test-results artifact for more information"
-                exit $TEST_EXIT_CODE
-              else
-                echo "Tests passed"
-              fi
+              reportgenerator \
+                -reports:${{github.workspace}}/integration-coverage.lcov \
+                -targetdir:${{github.workspace}}/coverage-report \
+                -reporttypes:Html \
+                -sourcedirs:${{github.workspace}} \
+                -verbosity:Verbose
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v6
+        with:
+          name: Code Coverage Report
+          path: ${{github.workspace}}/coverage-report
 
   determine_whether_to_publish:
 
@@ -286,12 +327,12 @@ jobs:
           path: ${{ github.workspace }}
 
       - name: Download global.json
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: source
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           global-json-file: source/global.json
           source-url: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"

@@ -1,0 +1,9 @@
+{
+  "string": "string-value",
+  "integer": 5,
+  "null": null,
+  "object": {
+    "member1": "member",
+    "member2": 42
+  }
+}

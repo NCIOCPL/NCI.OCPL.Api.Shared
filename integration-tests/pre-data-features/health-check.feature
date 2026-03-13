@@ -14,4 +14,4 @@ Feature: The library offers the ability to check the status of the Elasticsearch
     Given path 'HealthCheck'
     When method GET
     Then status 200
-    And match response == false
+    And match response == 'false'

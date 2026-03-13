@@ -5,10 +5,12 @@ using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Moq;
 using Moq.Protected;
-using Nest;
 using Xunit;
+
+using Elastic.Clients.Elasticsearch;
 
 namespace NCI.OCPL.Api.Common
 {
@@ -92,7 +94,7 @@ namespace NCI.OCPL.Api.Common
       Assert.NotNull(serviceProvider);
 
       Exception ex = Assert.Throws<APIInternalException>(
-        () => serviceProvider.GetService(typeof(IElasticClient))
+        () => serviceProvider.GetService(typeof(ElasticsearchClient))
       );
 
       Assert.Equal("No servers configured", ex.Message);
@@ -130,9 +132,9 @@ namespace NCI.OCPL.Api.Common
 
       Assert.NotNull(serviceProvider);
 
-      Object svc = serviceProvider.GetService(typeof(IElasticClient));
+      Object svc = serviceProvider.GetService(typeof(ElasticsearchClient));
       Assert.NotNull(svc);
-      Assert.IsAssignableFrom<IElasticClient>(svc);
+      Assert.IsAssignableFrom<ElasticsearchClient>(svc);
     }
 
     /// <summary>
@@ -173,9 +175,9 @@ namespace NCI.OCPL.Api.Common
 
       Object svc;
 
-      svc = serviceProvider.GetService(typeof(ILogger<ElasticClient>));
+      svc = serviceProvider.GetService(typeof(ILogger<ElasticsearchClient>));
       Assert.NotNull(svc);
-      Assert.IsAssignableFrom<Logger<ElasticClient>>(svc);
+      Assert.IsAssignableFrom<Logger<ElasticsearchClient>>(svc);
     }
 
     /// <summary>

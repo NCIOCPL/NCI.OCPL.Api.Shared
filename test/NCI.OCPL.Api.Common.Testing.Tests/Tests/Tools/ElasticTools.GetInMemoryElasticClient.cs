@@ -1,31 +1,28 @@
-using Nest;
+using Elastic.Clients.Elasticsearch;
 using Xunit;
 
 namespace NCI.OCPL.Api.Common.Testing
 {
-#pragma warning disable CS0618
-  [ElasticsearchType(Name = "terms")]
-#pragma warning restore CS0618
-
   public partial class ElasticToolsTest
   {
     [Fact]
     public void GetInMemoryElasticClient()
     {
-      IElasticClient client = ElasticTools.GetInMemoryElasticClient("test-response.json");
+      ElasticsearchClient client = ElasticTools.GetInMemoryElasticClient("test-response.json");
       var response = client.SearchTemplate<TestType>(sd => sd
-                .Index("AliasName")
+                .Indices("AliasName")
                 .Params(pd => pd
                     .Add("searchstring", "search_term")
                     .Add("my_size", 10)
                 )
             );
 
-      Assert.True(response.IsValid);
-      Assert.Equal(222, response.Total);
-      Assert.Equal(20, response.Documents.Count);
-      Assert.All(response.Documents, doc => Assert.NotNull(doc));
-      Assert.All(response.Documents, doc => Assert.IsType<TestType>(doc));
+      Assert.True(response.IsValidResponse);
+      var totalHits = response.Hits.Total.Match(t => t.Value, l => l);
+      Assert.Equal(222, totalHits);
+      Assert.Equal(20, response.Hits.Hits.Count);
+      Assert.All(response.Hits.Hits, hit => Assert.NotNull(hit.Source));
+      Assert.All(response.Hits.Hits, hit => Assert.IsType<TestType>(hit.Source));
     }
   }
 }

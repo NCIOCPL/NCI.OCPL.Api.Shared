@@ -1,5 +1,5 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+
 using Xunit;
 
 namespace NCI.OCPL.Api.Common.Models.Options
@@ -12,8 +12,7 @@ namespace NCI.OCPL.Api.Common.Models.Options
     [Fact]
     public void Serialize()
     {
-      // Use JToken for comparisons because we don't care about the order.
-      JToken expected = JToken.Parse(@"
+      ElasticsearchOptions expected = JsonSerializer.Deserialize<ElasticsearchOptions>(@"
 {
   ""Servers"": ""Server list"",
   ""Userid"": ""the user id"",
@@ -29,10 +28,10 @@ namespace NCI.OCPL.Api.Common.Models.Options
         MaximumRetries = 3
       };
 
-      string actualText = JsonConvert.SerializeObject(options);
-      JToken actualObject = JToken.Parse(actualText);
+      string actualText = JsonSerializer.Serialize(options);
+      ElasticsearchOptions actual = JsonSerializer.Deserialize<ElasticsearchOptions>(actualText);
 
-      Assert.Equal(expected, actualObject, new JTokenEqualityComparer());
+      Assert.Equivalent(expected, actual, strict: true);
     }
 
     [Fact]
@@ -51,7 +50,7 @@ namespace NCI.OCPL.Api.Common.Models.Options
   ""MaximumRetries"": 5
 }";
 
-      ElasticsearchOptions actual = JsonConvert.DeserializeObject<ElasticsearchOptions>(input);
+      ElasticsearchOptions actual = JsonSerializer.Deserialize<ElasticsearchOptions>(input);
 
       Assert.Equal(expectedServers, actual.Servers);
       Assert.Equal(expectedUserid, actual.Userid);

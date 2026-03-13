@@ -1,5 +1,5 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
+
 using Xunit;
 
 namespace NCI.OCPL.Api.Common.Models.Options
@@ -12,8 +12,7 @@ namespace NCI.OCPL.Api.Common.Models.Options
     [Fact]
     public void Serialize()
     {
-      // Use JToken for comparisons because we don't care about the order.
-      JToken expected = JToken.Parse(@"
+      NSwagOptions expected = JsonSerializer.Deserialize<NSwagOptions>(@"
 {
   ""Title"": ""Swagger Doc Title"",
   ""Description"": ""API Description""
@@ -25,10 +24,10 @@ namespace NCI.OCPL.Api.Common.Models.Options
         Description = "API Description"
       };
 
-      string actualText = JsonConvert.SerializeObject(options);
-      JToken actualObject = JToken.Parse(actualText);
+      string actualText = JsonSerializer.Serialize(options);
+      NSwagOptions actual = JsonSerializer.Deserialize<NSwagOptions>(actualText);
 
-      Assert.Equal(expected, actualObject, new JTokenEqualityComparer());
+      Assert.Equivalent(expected, actual, strict: true);
     }
 
     [Fact]
@@ -43,7 +42,7 @@ namespace NCI.OCPL.Api.Common.Models.Options
   ""Description"": ""API Description""
 }";
 
-      NSwagOptions actual = JsonConvert.DeserializeObject<NSwagOptions>(input);
+      NSwagOptions actual = JsonSerializer.Deserialize<NSwagOptions>(input);
 
       Assert.Equal(expectedTitle, actual.Title);
       Assert.Equal(expectedDescription, actual.Description);

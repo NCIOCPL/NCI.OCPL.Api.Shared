@@ -1,10 +1,10 @@
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Xml;
 using System.Xml.Serialization;
-
-using Newtonsoft.Json.Linq;
 
 
 namespace NCI.OCPL.Api.Common.Testing
@@ -27,6 +27,21 @@ namespace NCI.OCPL.Api.Common.Testing
 
             //Get the bytes
             byte[] contents = File.ReadAllBytes(path);
+
+            return contents;
+        }
+
+        /// <summary>
+        /// Gets a test file from the TestData folder and returns its contents as a string.
+        /// </summary>
+        /// <returns>The contents of the file as a string.</returns>
+        public static string ReadTestFile(string testFile)
+        {
+            //Get the path to the file.
+            string path = GetPathToTestFile(testFile);
+
+            //Get the contents as a string
+            string contents = File.ReadAllText(path);
 
             return contents;
         }
@@ -84,14 +99,14 @@ namespace NCI.OCPL.Api.Common.Testing
         }
 
         /// <summary>
-        /// Gets a JSON file and parses it into a JObject structure.
+        /// Gets a JSON file and parses it into a JsonNode structure.
         /// </summary>
         /// <param name="testFile">Name of the file to load.</param>
-        /// <returns>A JObject structure containing the parsed data.</returns>
-        public static JObject GetDataFileAsJObject(string testFile)
+        /// <returns>A JsonNode structure containing the parsed data.</returns>
+        public static JsonNode GetDataFileAsJson(string testFile)
         {
             string path = GetPathToTestFile(testFile);
-            return JObject.Parse(File.ReadAllText(path));
+            return JsonNode.Parse(File.ReadAllText(path));
         }
 
         /// <summary>

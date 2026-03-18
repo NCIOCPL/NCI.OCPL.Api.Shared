@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 
 using Elastic.Clients.Elasticsearch;
 using Elastic.Clients.Elasticsearch.Cluster;
+using Elastic.Clients.Elasticsearch.IndexManagement;
+using System.Linq;
 
 
 
@@ -36,7 +38,7 @@ namespace NCI.OCPL.Api.Common
     }
 
     /// <summary>
-    /// True if ESHealthCheckService if the index exists and the cluster health status is either green or yellow.
+    /// True if ESHealthCheckService if the index is usable and the cluster health status is either green or yellow.
     /// </summary>
     public async Task<bool> IndexIsHealthy()
     {
@@ -49,16 +51,30 @@ namespace NCI.OCPL.Api.Common
 
       try
       {
-        HealthResponse response = await _elasticClient.Cluster.HealthAsync(new HealthRequest(_aliasName));
+        Task<HealthResponse> clusterHealthTask = _elasticClient.Cluster.HealthAsync(new HealthRequest(_aliasName));
+        Task<ResolveIndexResponse> indexHealthTask = _elasticClient.Indices.ResolveIndexAsync(new ResolveIndexRequest(_aliasName));
 
-        if (!response.IsValidResponse)
+        await Task.WhenAll(clusterHealthTask, indexHealthTask);
+
+        HealthResponse clusterHealthResponse = await clusterHealthTask;
+        ResolveIndexResponse indexHealthResponse = await indexHealthTask;
+
+        if (!clusterHealthResponse.IsValidResponse)
         {
           _logger.LogError($"Error checking ElasticSearch health for {_aliasName}.");
-          _logger.LogError($"Returned debug info: {response.DebugInformation}.");
+          _logger.LogError($"Returned debug info: {clusterHealthResponse.DebugInformation}.");
+        }
+        else if (!indexHealthResponse.IsValidResponse)
+        {
+          _logger.LogError($"Error checking ElasticSearch health for {_aliasName}.");
+          _logger.LogError($"Returned debug info: {indexHealthResponse.DebugInformation}.");
         }
         else
         {
-          if (response.Status == HealthStatus.Green || response.Status == HealthStatus.Yellow)
+          // The cluster has at least one healthy shard, there is exactly one backing index, and it is open (usable).
+          if ((clusterHealthResponse.Status == HealthStatus.Green || clusterHealthResponse.Status == HealthStatus.Yellow)
+              && indexHealthResponse.Indices.Count == 1
+              && indexHealthResponse.Indices.Any( i => i.Attributes.Contains("open")))
           {
             //This is the only condition that will return true
             return true;
@@ -71,8 +87,7 @@ namespace NCI.OCPL.Api.Common
       }
       catch (Exception ex)
       {
-        _logger.LogError($"Error checking ElasticSearch health for {_aliasName}.");
-        _logger.LogError($"Exception: {ex.Message}.");
+        _logger.LogError(ex, $"Error checking ElasticSearch health for {_aliasName}.");
       }
       return false;
     }

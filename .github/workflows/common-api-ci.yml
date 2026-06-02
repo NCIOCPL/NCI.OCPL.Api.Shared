@@ -105,9 +105,15 @@ jobs:
     name: Run Integration Tests (on Linux)
     runs-on: ubuntu-latest
     needs: test_build_release
+    # Hacky way to get the ELASTIC_SEARCH_IMAGE variable in single location.
+    strategy:
+      matrix:
+        elastic_search_image: [elasticsearch:8.19.12]
+    env:
+      ELASTIC_SEARCH_IMAGE: ${{ matrix.elastic_search_image }}
     services:
       elasticsearch:
-        image: elasticsearch:8.19.12
+        image: ${{ matrix.elastic_search_image }}
         env:
             discovery.type: single-node
             ES_JAVA_OPTS: -Xms750m -Xmx750m
@@ -131,7 +137,11 @@ jobs:
         shell: bash
         run: |
             if [[ -e 'integration-tests/bin/docker-setup.sh' ]]; then
-              CONTAINER_ID=$(docker ps -q --filter "ancestor=elasticsearch:7.17.28")
+              CONTAINER_ID=$(docker ps -q --filter "ancestor=${ELASTIC_SEARCH_IMAGE}")
+              if [ -z "$CONTAINER_ID" ]; then
+                echo "Could not find running container for image ${ELASTIC_SEARCH_IMAGE}"
+                exit 1
+              fi
               integration-tests/bin/docker-setup.sh $CONTAINER_ID
             fi
 

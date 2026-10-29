@@ -39,10 +39,10 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -61,7 +61,7 @@ jobs:
       - name: Save code coverage output
         # Coverage output isn't created on Windows, so don't upload it.
         if: matrix.operating-system != 'windows-latest'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{matrix.package}}-${{ matrix.operating-system }}
           path: ${{matrix.package}}.lcov
@@ -81,12 +81,12 @@ jobs:
           dotnet pack --configuration Release --output $GITHUB_WORKSPACE/out src/${{matrix.package}}
 
       - name: Record metadata
-        uses: nciocpl/build-info-action@v1.0.1
+        uses: nciocpl/build-info-action@v1.0.2
         with:
             output-name: "${{ github.workspace }}/out/wwwroot/build-info.json"
 
       - name: Upload Published Artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: ${{matrix.package}}-${{ matrix.operating-system }}
           path: out
@@ -98,7 +98,7 @@ jobs:
     needs: test_build_release
     services:
       elasticsearch:
-        image: elasticsearch:8.19.12
+        image: elasticsearch:8.19.23
         env:
           ## Pass elasticsearch options via environment variables.
           discovery.type: single-node
@@ -114,10 +114,10 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -129,7 +129,7 @@ jobs:
               mkdir -p "${{github.workspace}}/coverage-report"
 
       - name: Retrieve unit test coverage reports
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: coverage-NCI.OCPL.Api.Common-ubuntu-latest
 
@@ -194,7 +194,7 @@ jobs:
 
       - name: Save the API startup Log
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: integration-tests-api-startup-log
           path: integration-tests/target/api_log.txt
@@ -234,14 +234,14 @@ jobs:
 
       - name: Upload Integration test results
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-results
           path: integration-tests/target
 
       - name: Upload code coverage data
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-integration
           path: ${{github.workspace}}/integration-coverage.lcov
@@ -256,7 +256,7 @@ jobs:
                 -verbosity:Verbose
 
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Code Coverage Report
           path: ${{github.workspace}}/coverage-report
@@ -321,18 +321,18 @@ jobs:
 
     steps:
       - name: Download Published Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{matrix.package}}-windows-latest
           path: ${{ github.workspace }}
 
       - name: Download global.json
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: source
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: source/global.json
           source-url: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"

@@ -40,11 +40,11 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
         ## using latest LTS release - also it MUST be the SDK version.
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
           source-url: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
@@ -65,13 +65,13 @@ jobs:
       - name: Save Code Coverage Output
         # Coverage output isn't created on Windows, so don't upload it.
         if: matrix.operating-system != 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ matrix.operating-system }}
           path: lcov.info
 
       - name: Download install tools
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: nciocpl/nci.ocpl.api.shared
           # Ref will need to be updated when version changes.
@@ -90,12 +90,12 @@ jobs:
             cp $GITHUB_WORKSPACE/shared/tools/deploy-api.ps1 $GITHUB_WORKSPACE/out/
 
       - name: Record metadata
-        uses: nciocpl/build-info-action@v1.0.1
+        uses: nciocpl/build-info-action@v1.0.2
         with:
             output-name: "${{ github.workspace }}/out/${{ inputs.artifact-name }}-api/wwwroot/build-info.json"
 
       - name: Upload Published Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact-name }}-api-${{ matrix.operating-system }}
           path: out
@@ -108,7 +108,7 @@ jobs:
     # Hacky way to get the ELASTIC_SEARCH_IMAGE variable in single location.
     strategy:
       matrix:
-        elastic_search_image: [elasticsearch:8.19.12]
+        elastic_search_image: [elasticsearch:8.19.23]
     env:
       ELASTIC_SEARCH_IMAGE: ${{ matrix.elastic_search_image }}
     services:
@@ -128,7 +128,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
         # If a particular API project needs to do some special docker setup
         # (e.g. Sitewide Search sets up synonyms for Elasticsearch), it should
@@ -146,13 +146,13 @@ jobs:
             fi
 
       - name: Download Published Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.artifact-name }}-api-ubuntu-latest
           path: built-api
 
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
           source-url: "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
@@ -208,7 +208,7 @@ jobs:
 
       - name: Upload Integration test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-results
           path: integration-tests/target

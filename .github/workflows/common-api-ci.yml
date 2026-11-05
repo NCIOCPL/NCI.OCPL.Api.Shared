@@ -108,7 +108,7 @@ jobs:
     # Hacky way to get the ELASTIC_SEARCH_IMAGE variable in single location.
     strategy:
       matrix:
-        elastic_search_image: [elasticsearch:8.19.23]
+        elastic_search_image: [docker.elastic.co/elasticsearch/elasticsearch-wolfi:8.19.24]
     env:
       ELASTIC_SEARCH_IMAGE: ${{ matrix.elastic_search_image }}
     services:

@@ -98,7 +98,7 @@ jobs:
     needs: test_build_release
     services:
       elasticsearch:
-        image: elasticsearch:8.19.23
+        image: docker.elastic.co/elasticsearch/elasticsearch-wolfi:8.19.24
         env:
           ## Pass elasticsearch options via environment variables.
           discovery.type: single-node
